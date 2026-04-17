@@ -43,24 +43,24 @@ async function fetchAnping() {
         const station = data.records.Station[0];
         const weather = station.WeatherElement;
 
-        // 更新畫面數據
+        // 更新畫面數據 (對應 HTML 的 ID)
         document.getElementById('temp').innerText = (weather.AirTemperature || '--') + '°C';
         document.getElementById('wind').innerText = (weather.WindSpeed || '--') + ' m/s';
         document.getElementById('dir').innerText = (weather.WindDirection || '--') + '°';
-        document.getElementById('hum').innerText = (weather.RelativeHumidity || '--') + '%';
+        document.getElementById('rain').innerText = (station.WeatherElement.Now.Precipitation || '0.0') + ' mm';
         
-        document.getElementById('desc').innerText = '安平觀測站 - 即時海象';
         statusEl.innerText = '最後更新：' + station.ObsTime.DateTime.split('T')[1].substring(0,5);
         statusEl.style.color = '#64ffda';
         
     } catch (err) {
-        statusEl.innerText = '資料解析中，請重新整理頁面';
+        statusEl.innerText = '資料更新中，請重新整理頁面';
         console.error(err);
     }
 }
 
 fetchAnping();
-
+// 每 5 分鐘自動刷新一次數據
+setInterval(fetchAnping, 300000);
     </script>
 </body>
 </html>
