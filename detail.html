@@ -34,37 +34,28 @@
     </table>
 
     <script>
-        async function fetchTide() {
+    async function fetchTide() {
     try {
         const res = await fetch(`https://opendata.cwa.gov.tw/api/v1/rest/datastore/F-A0021-001?Authorization=${API_KEY}`);
         const data = await res.json();
         
-        // 1. 找到安平測站 (氣象署結構為 tideForecasts.location)
-        const locations = data.records.tideForecasts.location;
-        const anping = locations.find(l => l.locationName.includes("臺南") || l.stationName.includes("安平"));
+        // --- 除錯專區：直接把抓到的前幾筆資料印在畫面上 ---
+        // 我們抓取 location 陣列裡的第一個站點的前三筆潮汐週期
+        const debugData = data.records.tideForecasts.location[0].tideForecast.tidePeriod.slice(0, 3);
+        
+        document.getElementById('tide-table').innerHTML = `
+            <tr>
+                <td colspan="4" style="text-align:left; background:#233554; color:#fff;">
+                    <p>🚨 <strong>偵測到 API 格式如下：</strong></p>
+                    <pre style="font-size:10px; overflow:auto;">${JSON.stringify(debugData, null, 2)}</pre>
+                </td>
+            </tr>
+        `;
+        // ----------------------------------------------
 
-        if (!anping) throw new Error("找不到安平測站數據");
-
-        // 2. 取得今日資料 (注意欄位是 tideTime)
-        const allPeriods = anping.tideForecast.tidePeriod;
-        const daily = allPeriods.filter(p => p.tideTime.startsWith(today));
-
-        // 3. 計算潮差
-        const heights = daily.map(d => parseInt(d.tideHeight));
-        const maxH = Math.max(...heights);
-        const minH = Math.min(...heights);
-        const diff = maxH - minH;
-
-        // 更新 UI
-        document.getElementById('status-title').innerText = `📍 安平港 (今日潮差: ${diff}cm)`;
-        document.getElementById('bite-hint').innerHTML = diff > 100 
-            ? "咬況預估：<span class='highlight'>🔥 大潮活躍 (適合路亞/青物)</span>" 
-            : "咬況預估：<span>🎣 穩定小潮 (適合底棲)</span>";
-
-        render(daily);
+        console.log("完整資料結構：", data);
     } catch (err) {
-        console.error("錯誤詳情:", err);
-        document.getElementById('tide-table').innerHTML = '<tr><td colspan="4">❌ API 讀取失敗，請檢查網路或金鑰</td></tr>';
+        document.getElementById('tide-table').innerHTML = `<tr><td colspan="4">❌ 抓取失敗。錯誤訊息：${err.message}</td></tr>`;
     }
 }
 
