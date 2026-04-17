@@ -1,39 +1,75 @@
-<script>
-    // ... 前段代碼保持不變 ...
-    // 3. 潮汐精確讀取 (F-A0021-001)
-    fetch(`https://opendata.cwa.gov.tw/api/v1/rest/datastore/F-A0021-001?Authorization=${API_KEY}`)
-        .then(res => res.json())
-        .then(data => {
-            try {
-                // 強度解析：遍歷所有地點尋找「臺南」與「安平」
-                const locations = data.records.Location;
-                let anpingStation = null;
-                
-                for (let loc of locations) {
-                    if (loc.LocationName.includes("臺南")) {
-                        anpingStation = loc.Station.find(s => s.StationName.includes("安平"));
-                        if (anpingStation) break;
-                    }
-                }
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>安平釣點地圖工具</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+        :root { --bg: #0a192f; --card: #172a45; --highlight: #64ffda; --text: #e6f1ff; }
+        body, html { margin: 0; padding: 0; height: 100%; background: var(--bg); font-family: sans-serif; }
+        #map { height: 100%; width: 100%; }
+        .leaflet-popup-content-wrapper { background: var(--card); color: var(--text); border-radius: 12px; }
+        .info-title { color: #ff6b6b; font-weight: bold; border-bottom: 1px solid #233554; margin-bottom: 8px; font-size: 1rem; }
+        .val { color: var(--highlight); font-weight: bold; }
+        .detail-btn { display: block; text-align: center; background: #233554; color: var(--highlight); text-decoration: none; padding: 8px; border-radius: 8px; margin-top: 10px; border: 1px solid var(--highlight); font-weight: bold; }
+    </style>
+</head>
+<body>
+    <div id="map"></div>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+        const API_KEY = 'CWA-337BBD8F-DBC8-4D8D-A92F-DAA5B176120A';
+        const map = L.map('map', { center: [22.991, 120.146], zoom: 14 });
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
 
-                if (anpingStation && anpingStation.TideForecast && anpingStation.TideForecast.TimePeriods) {
-                    const now = new Date();
-                    const nextTide = anpingStation.TideForecast.TimePeriods.find(t => new Date(t.DateTime) > now);
-                    
-                    if (nextTide) {
-                        const timeStr = nextTide.DateTime.split('T')[1].substring(0, 5);
-                        document.getElementById('tide-box').innerHTML = `🌊 下次 <span class="val">${nextTide.TideType}</span>：${timeStr}`;
-                    } else {
-                        document.getElementById('tide-box').innerHTML = "🌊 今日預報已結束";
+        map.on('contextmenu', e => {
+            const { lat, lng } = e.latlng;
+            const popupHtml = `
+                <div class="info-title">GPS: ${lat.toFixed(4)}, ${lng.toFixed(4)}</div>
+                <div id="sun-box">🌅 日出 讀取中...</div>
+                <div id="weather-box">📡 氣象 讀取中...</div>
+                <div id="tide-box">🌊 潮汐 讀取中...</div>
+                <a href="detail.html" class="detail-btn">📊 查看 24h 詳細海象預報</a>
+            `;
+            L.popup().setLatLng(e.latlng).setContent(popupHtml).openOn(map);
+
+            // 1. 日出預報
+            fetch(`https://api.sunrise-sunset.org/json?lat=${lat}&lng=${lng}&formatted=0`)
+                .then(res => res.json()).then(d => {
+                    const sunrise = new Date(d.results.sunrise).toLocaleTimeString('zh-TW', {hour: '2-digit', minute:'2-digit'});
+                    document.getElementById('sun-box').innerHTML = `🌅 日出 <span class="val">${sunrise}</span>`;
+                });
+
+            // 2. 安平即時氣象 (O-A0003-001)
+            fetch(`https://opendata.cwa.gov.tw/api/v1/rest/datastore/O-A0003-001?Authorization=${API_KEY}&stationId=C0X090`)
+                .then(res => res.json()).then(data => {
+                    const w = data.records.Station[0].WeatherElement;
+                    document.getElementById('weather-box').innerHTML = `📡 風速 <span class="val">${w.WindSpeed} m/s</span> | 氣溫 <span class="val">${w.AirTemperature}°C</span>`;
+                });
+
+            // 3. 潮汐解析強化版 (F-A0021-001)
+            fetch(`https://opendata.cwa.gov.tw/api/v1/rest/datastore/F-A0021-001?Authorization=${API_KEY}`)
+                .then(res => res.json()).then(data => {
+                    try {
+                        // 自動尋找包含「臺南」的地點和包含「安平」的測站
+                        const loc = data.records.Location.find(l => l.LocationName.includes("臺南"));
+                        const sta = loc.Station.find(s => s.StationName.includes("安平"));
+                        
+                        const now = new Date();
+                        const nextTide = sta.TideForecast.TimePeriods.find(t => new Date(t.DateTime) > now);
+                        
+                        if (nextTide) {
+                            const timeStr = nextTide.DateTime.split('T')[1].substring(0, 5);
+                            document.getElementById('tide-box').innerHTML = `🌊 下次 <span class="val">${nextTide.TideType}</span>：${timeStr}`;
+                        }
+                    } catch (err) {
+                        document.getElementById('tide-box').innerHTML = "⚠️ 找不到測站，請點擊詳細資料";
                     }
-                } else {
-                    throw new Error("找不到測站資料");
-                }
-            } catch (err) {
-                console.error("解析錯誤:", err);
-                document.getElementById('tide-box').innerHTML = "⚠️ 測站資料解析中...";
-            }
-        }).catch(() => {
-            document.getElementById('tide-box').innerHTML = "❌ 潮汐連線失敗";
+                }).catch(() => {
+                    document.getElementById('tide-box').innerHTML = "❌ 潮汐 API 連線失敗";
+                });
         });
-</script>
+    </script>
+</body>
+</html>
