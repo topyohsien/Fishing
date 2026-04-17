@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>安平釣魚海象面板</title>
+    <style>
+        :root { --bg: #0a192f; --card: #172a45; --text: #64ffda; }
+        body { font-family: sans-serif; background: var(--bg); color: white; padding: 15px; margin: 0; }
+        .header { text-align: center; padding: 20px 0; border-bottom: 1px solid #233554; }
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 20px; }
+        .card { background: var(--card); padding: 15px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.3); }
+        .label { font-size: 0.8rem; color: #8892b0; margin-bottom: 5px; }
+        .value { font-size: 1.4rem; font-weight: bold; color: var(--text); }
+        .full-width { grid-column: span 2; }
+        #status { text-align: center; font-size: 0.8rem; color: #8892b0; margin-top: 10px; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h2 style="margin:0;">🎣 安平即時海象</h2>
+        <div id="status">正在更新氣象署資料...</div>
+    </div>
+    <div class="grid">
+        <div class="card">
+            <div class="label">當前氣溫</div>
+            <div id="temp" class="value">--</div>
+        </div>
+        <div class="card">
+            <div class="label">平均風速</div>
+            <div id="wind" class="value">--</div>
+        </div>
+        <div class="card">
+            <div class="label">風向</div>
+            <div id="dir" class="value">--</div>
+        </div>
+        <div class="card">
+            <div class="label">相對濕度</div>
+            <div id="hum" class="value">--</div>
+        </div>
+        <div class="card full-width">
+            <div class="label">天氣描述</div>
+            <div id="desc" class="value" style="font-size: 1.1rem;">等待資料中...</div>
+        </div>
+    </div>
+    <script>
+        const API_KEY = 'CWA-337BBD8F-DBC8-4D8D-A92F-DAA5B176120A';
+        async function fetchWeather() {
+            try {
+                const res = await fetch(`https://opendata.cwa.gov.tw/api/v1/rest/datastore/F-D0047-077?Authorization=${API_KEY}&locationName=安平區&elementName=T,WS,WD,WeatherDescription,RH`);
+                const data = await res.json();
+                const elements = data.records.locations[0].location[0].weatherElement;
+                document.getElementById('temp').innerText = elements.find(e => e.elementName === 'T').time[0].elementValue[0].value + '°C';
+                document.getElementById('wind').innerText = elements.find(e => e.elementName === 'WS').time[0].elementValue[0].value + ' m/s';
+                document.getElementById('dir').innerText = elements.find(e => e.elementName === 'WD').time[0].elementValue[0].value;
+                document.getElementById('hum').innerText = elements.find(e => e.elementName === 'RH').time[0].elementValue[0].value + '%';
+                document.getElementById('desc').innerText = elements.find(e => e.elementName === 'WeatherDescription').time[0].elementValue[0].value.split('。')[0];
+                document.getElementById('status').innerText = '最後更新：' + new Date().toLocaleTimeString();
+            } catch (err) {
+                document.getElementById('status').innerText = '抓取失敗';
+            }
+        }
+        fetchWeather();
+        setInterval(fetchWeather, 600000);
+    </script>
+</body>
+</html>
