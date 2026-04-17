@@ -57,6 +57,65 @@
                 document.getElementById('sun-box').innerHTML = `🌅 日出 <span class="val">${sunrise}</span> | 日落 <span class="val">${sunset}</span>`;
             } catch (e) { document.getElementById('sun-box').innerText = "❌ 日出讀取失敗"; }
 
+            // 2. 抓取潮汐 (強化路徑相容性)
+            try {
+                const tideUrl = `https://opendata.cwa.gov.tw/api/v1/rest/datastore/F-A0021-001?Authorization=${API_KEY}`;
+                const res = await fetch(tideUrl);
+                const data = await res.json();
+                
+                if (!data.records || !data.records.Location) throw new Error("API Key 權限不足");
+
+                // 搜尋臺南市
+                const tainan = data.records.Location.find(loc => loc.LocationName === "臺南市");
+                if (!tainan) throw new Error("找不到臺南資料");
+
+                // 強化尋找站點：相容 Station 是陣列或物件的情況
+                let stations = tainan.Station;
+                let anping = Array.isArray(stations) ? stations.find(st => st.StationName === "安平") : stations;
+                
+                if (!anping && Array.isArray(stations)) anping = stations[0]; // 沒安平就抓第一筆
+
+                const now = new Date();
+                const timePeriods = anping.TideForecast.TimePeriods;
+                const nextTide = timePeriods.find(t => new Date(t.DateTime) > now);
+
+                if (nextTide) {
+                    const tTime = nextTide.DateTime.split('T')[1].substring(0, 5);
+                    document.getElementById('tide-box').innerHTML = `🌊 下次 <span class="val">${nextTide.TideType}</span>：${tTime} (${nextTide.TideHeight || '--'}cm)`;
+                } else {
+                    document.getElementById('tide-box').innerText = "⚠️ 暫無預報資料";
+                }
+            } catch (e) {
+                console.error(e);
+                document.getElementById('tide-box').innerHTML = `<span style="color:#ffbb33">❌ ${e.message}</span><br><small>請至氣象署檢查預報 API 權限</small>`;
+            }
+        }
+    </script>
+</body>
+</html>
+
+        map.on('contextmenu', function(e) {
+            const { lat, lng } = e.latlng;
+            fetchData(lat.toFixed(5), lng.toFixed(5), e.latlng);
+        });
+
+        async function fetchData(lat, lng, latlng) {
+            const popupHtml = `
+                <div class="info-title">GPS: ${lat}, ${lng}</div>
+                <div id="sun-box" class="info-row">🌅 日出日落讀取中...</div>
+                <div id="tide-box" class="info-row">🌊 潮汐預報讀取中...</div>
+            `;
+            const popup = L.popup().setLatLng(latlng).setContent(popupHtml).openOn(map);
+
+            // 1. 抓取日出日落
+            try {
+                const sunRes = await fetch(`https://api.sunrise-sunset.org/json?lat=${lat}&lng=${lng}&formatted=0`);
+                const sunData = await sunRes.json();
+                const sunrise = new Date(sunData.results.sunrise).toLocaleTimeString('zh-TW', {hour: '2-digit', minute:'2-digit'});
+                const sunset = new Date(sunData.results.sunset).toLocaleTimeString('zh-TW', {hour: '2-digit', minute:'2-digit'});
+                document.getElementById('sun-box').innerHTML = `🌅 日出 <span class="val">${sunrise}</span> | 日落 <span class="val">${sunset}</span>`;
+            } catch (e) { document.getElementById('sun-box').innerText = "❌ 日出讀取失敗"; }
+
             // 2. 抓取潮汐 (深度解析安平站點)
             try {
                 const tideUrl = `https://opendata.cwa.gov.tw/api/v1/rest/datastore/F-A0021-001?Authorization=${API_KEY}`;
