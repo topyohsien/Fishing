@@ -12,7 +12,7 @@
         .leaflet-popup-content-wrapper { background: var(--card); color: var(--text); border-radius: 12px; }
         .info-title { color: #ff6b6b; font-weight: bold; border-bottom: 1px solid #233554; margin-bottom: 8px; font-size: 1rem; }
         .val { color: var(--highlight); font-weight: bold; }
-        .detail-btn { display: block; text-align: center; background: #233554; color: var(--highlight); text-decoration: none; padding: 8px; border-radius: 8px; margin-top: 10px; border: 1px solid var(--highlight); }
+        .detail-btn { display: block; text-align: center; background: #233554; color: var(--highlight); text-decoration: none; padding: 8px; border-radius: 8px; margin-top: 10px; border: 1px solid var(--highlight); font-weight: bold; }
     </style>
 </head>
 <body>
@@ -29,33 +29,46 @@
                 <div class="info-title">GPS: ${lat.toFixed(4)}, ${lng.toFixed(4)}</div>
                 <div id="sun-box">🌅 讀取中...</div>
                 <div id="weather-box">📡 讀取中...</div>
-                <div id="tide-box">🌊 讀取中...</div>
-                <a href="detail.html" class="detail-btn">📊 查看 24h 詳細資訊</a>
+                <div id="tide-box">🌊 潮汐連線中...</div>
+                <a href="detail.html" class="detail-btn">📊 查看 24h 詳細海象預報</a>
             `;
             L.popup().setLatLng(e.latlng).setContent(popupHtml).openOn(map);
 
-            // 1. 日出
+            // 1. 日出預報 (Sunrise API)
             fetch(`https://api.sunrise-sunset.org/json?lat=${lat}&lng=${lng}&formatted=0`)
                 .then(res => res.json()).then(d => {
                     const sunrise = new Date(d.results.sunrise).toLocaleTimeString('zh-TW', {hour: '2-digit', minute:'2-digit'});
                     document.getElementById('sun-box').innerHTML = `🌅 日出 <span class="val">${sunrise}</span>`;
-                });
+                }).catch(() => document.getElementById('sun-box').innerHTML = "🌅 日出讀取失敗");
 
-            // 2. 氣象 (安平站)
+            // 2. 安平即時氣象 (O-A0003-001)
             fetch(`https://opendata.cwa.gov.tw/api/v1/rest/datastore/O-A0003-001?Authorization=${API_KEY}&stationId=C0X090`)
                 .then(res => res.json()).then(data => {
                     const w = data.records.Station[0].WeatherElement;
                     document.getElementById('weather-box').innerHTML = `📡 風速 <span class="val">${w.WindSpeed} m/s</span> | 氣溫 <span class="val">${w.AirTemperature}°C</span>`;
-                });
+                }).catch(() => document.getElementById('weather-box').innerHTML = "📡 氣象連線超時");
 
-            // 3. 潮汐 (直接鎖定安平)
+            // 3. 潮汐精確讀取 (F-A0021-001)
             fetch(`https://opendata.cwa.gov.tw/api/v1/rest/datastore/F-A0021-001?Authorization=${API_KEY}`)
                 .then(res => res.json()).then(data => {
-                    const tainan = data.records.Location.find(l => l.LocationName.includes("臺南"));
+                    // 針對 F-A0021-001 特定的 Location 與 Station 結構進行遍歷
+                    const locations = data.records.Location || [];
+                    const tainan = locations.find(l => l.LocationName.includes("臺南"));
                     const anping = tainan.Station.find(s => s.StationName.includes("安平"));
-                    const nextTide = anping.TideForecast.TimePeriods.find(t => new Date(t.DateTime) > new Date());
-                    document.getElementById('tide-box').innerHTML = `🌊 下次 <span class="val">${nextTide.TideType}</span>：${nextTide.DateTime.split('T')[1].substring(0, 5)}`;
-                }).catch(() => document.getElementById('tide-box').innerHTML = "🌊 潮汐資料暫時無法讀取");
+                    
+                    // 找尋最接近現在時間的潮汐點
+                    const now = new Date();
+                    const nextTide = anping.TideForecast.TimePeriods.find(t => new Date(t.DateTime) > now);
+                    
+                    if (nextTide) {
+                        const timeStr = nextTide.DateTime.split('T')[1].substring(0, 5);
+                        document.getElementById('tide-box').innerHTML = `🌊 下次 <span class="val">${nextTide.TideType}</span>：${timeStr}`;
+                    } else {
+                        document.getElementById('tide-box').innerHTML = "🌊 今日預報已結束";
+                    }
+                }).catch(() => {
+                    document.getElementById('tide-box').innerHTML = "⚠️ 潮汐權限驗證中...";
+                });
         });
     </script>
 </body>
