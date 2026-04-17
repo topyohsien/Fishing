@@ -2,75 +2,43 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>安平釣魚即時海象</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>安平釣點地圖工具</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
-        :root { --bg: #0a192f; --card: #172a45; --text: #64ffda; }
-        body { font-family: sans-serif; background: var(--bg); color: white; padding: 15px; margin: 0; }
-        .header { text-align: center; padding: 20px 0; border-bottom: 1px solid #233554; }
-        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 20px; }
-        .card { background: var(--card); padding: 15px; border-radius: 12px; }
-        .label { font-size: 0.8rem; color: #8892b0; margin-bottom: 5px; }
-        .value { font-size: 1.4rem; font-weight: bold; color: var(--text); }
-        #status { text-align: center; font-size: 0.7rem; color: #8892b0; margin-top: 10px; }
+        :root { --bg: #0a192f; --card: #172a45; --highlight: #64ffda; --text: #e6f1ff; }
+        body, html { margin: 0; padding: 0; height: 100%; background: var(--bg); overflow: hidden; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+        #map { height: 100%; width: 100%; }
+        .instruction {
+            position: absolute; top: 15px; left: 50%; transform: translateX(-50%);
+            z-index: 1000; background: rgba(23, 42, 69, 0.9);
+            color: var(--highlight); padding: 8px 20px; border-radius: 25px;
+            border: 1px solid var(--highlight); font-size: 14px; pointer-events: none; white-space: nowrap;
+        }
+        .leaflet-popup-content-wrapper { background: var(--card); color: var(--text); border-radius: 12px; border: 1px solid #233554; padding: 5px; }
+        .leaflet-popup-tip { background: var(--card); }
+        .info-title { color: #ff6b6b; font-weight: bold; border-bottom: 1px solid #233554; margin-bottom: 8px; font-size: 1.1rem; padding-bottom: 5px; }
+        .info-row { margin: 8px 0; font-size: 14px; line-height: 1.5; }
+        .val { color: var(--highlight); font-weight: bold; }
+        .detail-btn {
+            display: block; text-align: center; background: #233554; color: var(--highlight);
+            text-decoration: none; padding: 10px; border-radius: 8px; margin-top: 10px;
+            font-weight: bold; border: 1px solid var(--highlight); transition: 0.3s;
+        }
+        .detail-btn:active { background: var(--highlight); color: var(--bg); }
     </style>
 </head>
 <body>
-    <div class="header">
-        <h2 style="margin:0;">🎣 安平觀測站即時海象</h2>
-        <div id="status">同步中...</div>
-    </div>
-    <div class="grid">
-        <div class="card"><div class="label">氣溫</div><div id="temp" class="value">--</div></div>
-        <div class="card"><div class="label">風速 (m/s)</div><div id="wind" class="value">--</div></div>
-        <div class="card"><div class="label">風向</div><div id="dir" class="value">--</div></div>
-        <div class="card"><div class="label">日累積雨量</div><div id="rain" class="value">--</div></div>
-    </div>
 
+    <div class="instruction">📍 長按地圖任意點查看詳細海象</div>
+    <div id="map"></div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
+        // 這是你先前的授權碼，請確認已開通 F-A0021-001 權限
         const API_KEY = 'CWA-337BBD8F-DBC8-4D8D-A92F-DAA5B176120A';
 
-        async function fetchAnping() {
-            const statusEl = document.getElementById('status');
-            try {
-                // 強制使用大寫 StationId
-                const url = `https://opendata.cwa.gov.tw/api/v1/rest/datastore/O-A0003-001?Authorization=${API_KEY}&stationId=C0X090`;
-                
-                const res = await fetch(url);
-                const data = await res.json();
-                
-                // 只要 records 裡有 Station 資料就強行讀取
-                if (data.records && data.records.Station && data.records.Station.length > 0) {
-                    const station = data.records.Station[0];
-                    const w = station.WeatherElement;
+        const map = L.map('map', { center: [22.991, 120.146], zoom: 14, zoomControl: false });
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
 
-                    // 針對觀測站 JSON 結構進行深度取值
-                    const getVal = (obj) => (obj && typeof obj === 'object' ? (obj.Value || obj.Temperature || obj.Speed || '--') : (obj || '--'));
-
-                    document.getElementById('temp').innerText = getVal(w.AirTemperature) + '°C';
-                    document.getElementById('wind').innerText = getVal(w.WindSpeed) + ' m/s';
-                    document.getElementById('dir').innerText = getVal(w.WindDirection) + '°';
-                    
-                    // 雨量特別處理
-                    let rain = '--';
-                    if (w.Now && w.Now.Precipitation !== undefined) rain = w.Now.Precipitation;
-                    else if (w.PrecipitationNow) rain = w.PrecipitationNow;
-                    document.getElementById('rain').innerText = rain + ' mm';
-                    
-                    const obsTime = station.ObsTime.DateTime.split('T')[1].substring(0, 5);
-                    statusEl.innerText = '最後更新：' + obsTime;
-                    statusEl.style.color = '#64ffda';
-                } else {
-                    statusEl.innerText = '目前無資料，請確認 API Key 權限';
-                }
-            } catch (err) {
-                statusEl.innerText = '讀取失敗，正重新連線...';
-                console.error(err);
-            }
-        }
-
-        fetchAnping();
-        setInterval(fetchAnping, 300000);
-    </script>
-</body>
-</html>
+        map
