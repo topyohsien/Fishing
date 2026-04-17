@@ -3,27 +3,31 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>安平詳細海象預報</title>
+    <title>安平詳細海象與釣果預報</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         :root { --bg: #0a192f; --card: #172a45; --highlight: #64ffda; --text: #e6f1ff; }
-        body { background: var(--bg); color: var(--text); font-family: sans-serif; padding: 15px; }
+        body { background: var(--bg); color: var(--text); font-family: sans-serif; padding: 15px; margin: 0; }
         .card { background: var(--card); border-radius: 12px; padding: 15px; border: 1px solid #233554; margin-bottom: 20px; }
         .highlight { color: var(--highlight); font-weight: bold; }
-        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-        th, td { padding: 10px; border-bottom: 1px solid #233554; text-align: center; font-size: 14px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 15px; background: rgba(23, 42, 69, 0.5); border-radius: 8px; overflow: hidden; }
+        th, td { padding: 12px 8px; border-bottom: 1px solid #233554; text-align: center; font-size: 13px; }
+        th { background: #1d3557; color: var(--highlight); }
+        .hot { background: rgba(255, 107, 107, 0.15); color: #ff6b6b; font-weight: bold; }
     </style>
 </head>
 <body>
+    <div style="margin-bottom:15px;"><a href="map.html" style="color:var(--highlight); text-decoration:none; font-weight:bold;">← 返回地圖</a></div>
     <div class="card">
-        <div id="loc-name" class="highlight">📍 正在連線安平測站...</div>
-        <div style="margin-top:10px;">咬況預估：<span id="bite-status" class="highlight">--</span></div>
+        <div id="loc-name" class="highlight" style="font-size:1.1rem;">📍 安平數據同步中...</div>
+        <div style="margin-top:10px; font-size:0.9rem;">建議釣組：<span class="highlight">Shore Jigging / Lure</span></div>
+        <div style="margin-top:5px; font-size:0.9rem;">咬況預估：<span id="bite-status" class="highlight">分析中...</span></div>
     </div>
     <div class="card">
-        <canvas id="tideChart"></canvas>
+        <canvas id="tideChart" height="150"></canvas>
     </div>
     <table>
-        <thead><tr><th>時間</th><th>潮高</th><th>類型</th></tr></thead>
+        <thead><tr><th>時間</th><th>潮高</th><th>類型</th><th>預估</th></tr></thead>
         <tbody id="tide-table"></tbody>
     </table>
 
@@ -35,40 +39,57 @@
             try {
                 const res = await fetch(`https://opendata.cwa.gov.tw/api/v1/rest/datastore/F-A0021-001?Authorization=${API_KEY}`);
                 const data = await res.json();
-                const anping = data.records.Location.find(l => l.LocationName.includes("臺南")).Station.find(s => s.StationName.includes("安平"));
+                
+                // 修正 F-A0021-001 資料定位
+                const tainan = data.records.Location.find(l => l.LocationName.includes("臺南"));
+                const anping = tainan.Station.find(s => s.StationName.includes("安平"));
                 const dailyData = anping.TideForecast.TimePeriods.filter(t => t.DateTime.startsWith(today));
 
                 const heights = dailyData.map(d => parseInt(d.TideHeight));
                 const tideDiff = Math.max(...heights) - Math.min(...heights);
-                document.getElementById('loc-name').innerText = `📍 安平港區 (今日潮差: ${tideDiff}cm)`;
-                document.getElementById('bite-status').innerText = tideDiff > 100 ? "🔥 爆咬大潮" : "🎣 穩定小潮";
+                document.getElementById('loc-name').innerText = `📍 安平港區 (潮差: ${tideDiff}cm)`;
+                document.getElementById('bite-status').innerText = tideDiff > 100 ? "🔥 大潮爆咬期" : "🎣 穩定小潮";
 
                 render(dailyData);
             } catch (e) {
-                document.getElementById('tide-table').innerHTML = '<tr><td colspan="3">❌ 資料讀取失敗</td></tr>';
+                document.getElementById('tide-table').innerHTML = '<tr><td colspan="4">❌ API 資料解析失敗，請重新整理</td></tr>';
             }
         }
 
         function render(list) {
             const labels = list.map(d => d.DateTime.split('T')[1].substring(0, 5));
-            const data = list.map(d => d.TideHeight);
+            const dataValues = list.map(d => d.TideHeight);
 
             new Chart(document.getElementById('tideChart'), {
                 type: 'line',
                 data: {
                     labels: labels,
-                    datasets: [{ label: '潮高', data: data, borderColor: '#64ffda', tension: 0.4 }]
+                    datasets: [{
+                        data: dataValues,
+                        borderColor: '#64ffda',
+                        backgroundColor: 'rgba(100, 255, 218, 0.1)',
+                        fill: true,
+                        tension: 0.4
+                    }]
                 },
-                options: { plugins: { legend: { display: false } } }
+                options: { 
+                    plugins: { legend: { display: false } },
+                    scales: { y: { display: false }, x: { ticks: { color: '#8892b0', font: { size: 10 } } } }
+                }
             });
 
-            document.getElementById('tide-table').innerHTML = list.map(d => `
-                <tr>
-                    <td>${d.DateTime.split('T')[1].substring(0, 5)}</td>
-                    <td>${d.TideHeight} cm</td>
-                    <td>${d.TideType}</td>
-                </tr>
-            `).join('');
+            document.getElementById('tide-table').innerHTML = list.map(d => {
+                const time = d.DateTime.split('T')[1].substring(0, 5);
+                const isGolden = time.startsWith("05") || time.startsWith("06") || time.startsWith("17") || time.startsWith("18");
+                return `
+                    <tr class="${isGolden ? 'hot' : ''}">
+                        <td>${time}</td>
+                        <td>${d.TideHeight}cm</td>
+                        <td>${d.TideType}</td>
+                        <td>${isGolden ? '🔥 母光' : '穩定'}</td>
+                    </tr>
+                `;
+            }).join('');
         }
         init();
     </script>
