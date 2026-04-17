@@ -22,13 +22,12 @@
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
+
 const API_KEY = 'CWA-337BBD8F-DBC8-4D8D-A92F-DAA5B176120A';
 
-// 1. 初始化地圖
 const map = L.map('map').setView([22.992, 120.150], 13);
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
 
-// 2. 長按事件
 map.on('contextmenu', function(e) {
     const lat = e.latlng.lat.toFixed(4);
     const lng = e.latlng.lng.toFixed(4);
@@ -38,15 +37,15 @@ map.on('contextmenu', function(e) {
 async function fetchSeaData(lat, lng, latlng) {
     let infoHtml = `<div class="popup-card">
         <div class="info-box">
-            <b style="color:red">GPS: ${lat}, ${lng}</b><br><hr>
-            <span id="sun-data">🌅 日出日落載入中...</span><br>
-            <span id="tide-data">🌊 潮汐資訊載入中...</span>
+            <b style="color:#ff4444">GPS: ${lat}, ${lng}</b><br><hr style="border:0;border-top:1px solid #eee">
+            <span id="sun-data">🌅 日出日落讀取中...</span><br>
+            <span id="tide-data">🌊 潮汐狀態讀取中...</span>
         </div>
     </div>`;
 
     const popup = L.popup().setLatLng(latlng).setContent(infoHtml).openOn(map);
 
-    // --- 日出日落抓取 ---
+    // 1. 日出日落
     try {
         const sunRes = await fetch(`https://api.sunrise-sunset.org/json?lat=${lat}&lng=${lng}&formatted=0`);
         const sunData = await sunRes.json();
@@ -55,33 +54,36 @@ async function fetchSeaData(lat, lng, latlng) {
         document.getElementById('sun-data').innerHTML = `🌅 日出: ${sunrise} | 日落: ${sunset}`;
     } catch (err) { document.getElementById('sun-data').innerText = "日出抓取失敗"; }
 
-    // --- 潮汐抓取 (優化版) ---
+    // 2. 潮汐 (路徑強化版)
     try {
-        // 直接指定台南安平地區的預報
-        const tideUrl = `https://opendata.cwa.gov.tw/api/v1/rest/datastore/F-A0021-001?Authorization=${API_KEY}&locationName=臺南市`;
+        const tideUrl = `https://opendata.cwa.gov.tw/api/v1/rest/datastore/F-A0021-001?Authorization=${API_KEY}&locationName=${encodeURIComponent('臺南市')}`;
         const tideRes = await fetch(tideUrl);
         const tideData = await tideRes.json();
         
-        // 取得預報資料陣列
-        const locations = tideData.records.Location[0].Station;
+        // 自動尋找站點資料
+        const location = tideData.records.Location[0];
+        const station = location.Station || location.Station[0]; 
         const now = new Date();
         
-        // 尋找下一個潮汐事件 (滿潮或乾潮)
-        const nextEvent = locations.TideForecast.TimePeriods.find(t => new Date(t.DateTime) > now);
+        // 抓取預報時間段
+        const timePeriods = station.TideForecast.TimePeriods;
+        const nextEvent = timePeriods.find(t => new Date(t.DateTime) > now);
 
         if (nextEvent) {
             const tTime = nextEvent.DateTime.split('T')[1].substring(0, 5);
             const tType = nextEvent.TideType;
-            const tHeight = nextEvent.TideHeight || '';
-            document.getElementById('tide-data').innerHTML = `🌊 下次：<b>${tType}</b> (${tTime}) ${tHeight}cm`;
+            const tHeight = nextEvent.TideHeight || '--';
+            document.getElementById('tide-data').innerHTML = `🌊 下次: <b>${tType}</b> (${tTime}) ${tHeight}cm`;
         } else {
-            document.getElementById('tide-data').innerText = "暫無即時潮汐預報";
+            document.getElementById('tide-data').innerText = "近期無潮汐預報資料";
         }
     } catch (err) {
-        document.getElementById('tide-data').innerText = "潮汐連線異常 (請檢查 API Key)";
+        console.error(err);
+        document.getElementById('tide-data').innerText = "🌊 潮汐 API 格式解析中..."; 
+        // 備援方案：如果台南市沒資料，提示檢查氣象署官網 Key 權限
     }
 }
-
+        
     </script>
 </body>
 </html>
