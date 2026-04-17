@@ -18,7 +18,7 @@
 <body>
     <div class="header">
         <h2 style="margin:0;">🎣 安平觀測站即時海象</h2>
-        <div id="status">同步中...</div>
+        <div id="status">正在同步氣象署數據...</div>
     </div>
     <div class="grid">
         <div class="card"><div class="label">氣溫</div><div id="temp" class="value">--</div></div>
@@ -33,23 +33,48 @@
         async function fetchAnping() {
             const statusEl = document.getElementById('status');
             try {
-                // 鎖定安平觀測站
+                // 鎖定安平觀測站 C0X090
                 const url = `https://opendata.cwa.gov.tw/api/v1/rest/datastore/O-A0003-001?Authorization=${API_KEY}&StationId=C0X090`;
                 
                 const res = await fetch(url);
                 const data = await res.json();
                 
-                // 進入 records 取得測站物件
-                const station = data.records.Station[0];
-                const weather = station.WeatherElement;
+                // 確保 API 回傳成功且有資料
+                if (data.success === "true" && data.records.Station.length > 0) {
+                    const station = data.records.Station[0];
+                    const weather = station.WeatherElement;
 
-                // 更新畫面數據 (精確對應觀測站 JSON 欄位首字母大寫)
-                document.getElementById('temp').innerText = (weather.AirTemperature || '--') + '°C';
-                document.getElementById('wind').innerText = (weather.WindSpeed || '--') + ' m/s';
-                document.getElementById('dir').innerText = (weather.WindDirection || '--') + '°';
-                
-                // 雨量欄位結構較特殊，需進入 Now 分層
-                const rainVal = weather.Now ? weather.Now.Precipitation : '0.0';
-                document.getElementById('rain').innerText = rainVal + ' mm';
-                
-                statusEl.innerText = '最後更新：' + station.ObsTime.DateTime.split('T')[1].
+                    // 1. 氣溫 (AirTemperature)
+                    document.getElementById('temp').innerText = (weather.AirTemperature || '--') + '°C';
+                    
+                    // 2. 風速 (WindSpeed)
+                    document.getElementById('wind').innerText = (weather.WindSpeed || '--') + ' m/s';
+                    
+                    // 3. 風向 (WindDirection)
+                    document.getElementById('dir').innerText = (weather.WindDirection || '--') + '°';
+                    
+                    // 4. 雨量 (位於 Now -> Precipitation)
+                    const rainVal = weather.Now ? weather.Now.Precipitation : '0.0';
+                    document.getElementById('rain').innerText = rainVal + ' mm';
+                    
+                    // 更新時間顯示
+                    const obsTime = station.ObsTime.DateTime.split('T')[1].substring(0, 5);
+                    statusEl.innerText = '最後更新：' + obsTime;
+                    statusEl.style.color = '#64ffda';
+                } else {
+                    statusEl.innerText = '測站維護中或 API 資料更新中';
+                }
+            } catch (err) {
+                statusEl.innerText = '資料路徑載入中，請重新整理頁面';
+                console.error('Fetch Error:', err);
+            }
+        }
+
+        // 啟動抓取
+        fetchAnping();
+        
+        // 每 5 分鐘自動刷新一次數據
+        setInterval(fetchAnping, 300000);
+    </script>
+</body>
+</html>
