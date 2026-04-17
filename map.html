@@ -20,74 +20,47 @@
         .info-title { color: #ff6b6b; font-weight: bold; border-bottom: 1px solid #233554; margin-bottom: 8px; font-size: 1.1rem; padding-bottom: 5px; }
         .info-row { margin: 8px 0; font-size: 14px; line-height: 1.5; }
         .val { color: var(--highlight); font-weight: bold; }
-        /* 跳轉按鈕樣式 */
         .detail-btn {
             display: block; text-align: center; background: #233554; color: var(--highlight);
             text-decoration: none; padding: 10px; border-radius: 8px; margin-top: 10px;
-            font-weight: bold; border: 1px solid var(--highlight); transition: 0.3s;
+            font-weight: bold; border: 1px solid var(--highlight);
         }
     </style>
 </head>
 <body>
     <div class="instruction">📍 長按地圖查看精確海象預報</div>
     <div id="map"></div>
-
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
-        const API_KEY = 'CWA-337BBD8F-DBC8-4D8D-A92F-DAA5B176120A'; // 請確認授權碼正確
-
+        const API_KEY = 'CWA-337BBD8F-DBC8-4D8D-A92F-DAA5B176120A';
         const map = L.map('map', { center: [22.991, 120.146], zoom: 14, zoomControl: false });
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
 
-        map.on('contextmenu', function(e) {
+        map.on('contextmenu', e => {
             const { lat, lng } = e.latlng;
             fetchData(lat.toFixed(5), lng.toFixed(5), e.latlng);
         });
 
         async function fetchData(lat, lng, latlng) {
-            // 注意：這裡必須包含 <a href="detail.html"> 標籤才能跳轉
             const popupHtml = `
                 <div class="info-title">GPS: ${lat}, ${lng}</div>
                 <div id="sun-box" class="info-row">🌅 日出日落讀取中...</div>
-                <div id="weather-box" class="info-row">📡 即時氣象讀取中...</div>
-                <div id="tide-box" class="info-row">🌊 潮汐預報讀取中...</div>
+                <div id="weather-box" class="info-row">📡 即時氣壓讀取中...</div>
+                <div id="tide-box" class="info-row">🌊 潮汐預報連線中...</div>
                 <a href="detail.html?lat=${lat}&lng=${lng}" class="detail-btn">📊 查看 24h 詳細釣魚資訊</a>
             `;
-            const popup = L.popup().setLatLng(latlng).setContent(popupHtml).openOn(map);
+            L.popup().setLatLng(latlng).setContent(popupHtml).openOn(map);
 
-            // 1. 日出日落 (公開 API)
+            // 1. 日出日落
             fetch(`https://api.sunrise-sunset.org/json?lat=${lat}&lng=${lng}&formatted=0`)
-                .then(res => res.json())
-                .then(sunData => {
-                    const sunrise = new Date(sunData.results.sunrise).toLocaleTimeString('zh-TW', {hour: '2-digit', minute:'2-digit'});
-                    const sunset = new Date(sunData.results.sunset).toLocaleTimeString('zh-TW', {hour: '2-digit', minute:'2-digit'});
+                .then(res => res.json()).then(d => {
+                    const sunrise = new Date(d.results.sunrise).toLocaleTimeString('zh-TW', {hour: '2-digit', minute:'2-digit'});
+                    const sunset = new Date(d.results.sunset).toLocaleTimeString('zh-TW', {hour: '2-digit', minute:'2-digit'});
                     document.getElementById('sun-box').innerHTML = `🌅 日出 <span class="val">${sunrise}</span> | 日落 <span class="val">${sunset}</span>`;
                 });
 
-            // 2. 即時氣象 (O-A0003-001)
+            // 2. 氣象資料 (使用安平測站)
             fetch(`https://opendata.cwa.gov.tw/api/v1/rest/datastore/O-A0003-001?Authorization=${API_KEY}&stationId=C0X090`)
-                .then(res => res.json())
-                .then(data => {
+                .then(res => res.json()).then(data => {
                     const w = data.records.Station[0].WeatherElement;
-                    document.getElementById('weather-box').innerHTML = `📡 風速 <span class="val">${w.WindSpeed} m/s</span> | 氣溫 <span class="val">${w.AirTemperature}°C</span>`;
-                }).catch(() => { document.getElementById('weather-box').innerText = "📡 氣象觀測站讀取中..."; });
-
-            // 3. 潮汐簡報 (F-A0021-001)
-            fetch(`https://opendata.cwa.gov.tw/api/v1/rest/datastore/F-A0021-001?Authorization=${API_KEY}`)
-                .then(res => res.json())
-                .then(data => {
-                    const tainan = data.records.Location.find(loc => loc.LocationName === "臺南市");
-                    const anping = tainan.Station.find(st => st.StationName === "安平") || tainan.Station[0];
-                    const now = new Date();
-                    const nextTide = anping.TideForecast.TimePeriods.find(t => new Date(t.DateTime) > now);
-                    if (nextTide) {
-                        document.getElementById('tide-box').innerHTML = `🌊 下次 <span class="val">${nextTide.TideType}</span>：${nextTide.DateTime.split('T')[1].substring(0, 5)}`;
-                    }
-                })
-                .catch(() => {
-                    document.getElementById('tide-box').innerHTML = `<span style="color:#ffbb33">⚠️ 請確認訂閱 F-A0021-001</span>`;
-                });
-        }
-    </script>
-</body>
-</html>
+                    document.getElementById('weather-box').innerHTML = `📡 風速 <span class="
