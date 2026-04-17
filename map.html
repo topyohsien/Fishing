@@ -12,7 +12,7 @@
         .leaflet-popup-content-wrapper { background: var(--card); color: var(--text); border-radius: 12px; }
         .info-title { color: #ff6b6b; font-weight: bold; border-bottom: 1px solid #233554; margin-bottom: 8px; font-size: 1rem; }
         .val { color: var(--highlight); font-weight: bold; }
-        .detail-btn { display: block; text-align: center; background: #233554; color: var(--highlight); text-decoration: none; padding: 8px; border-radius: 8px; margin-top: 10px; border: 1px solid var(--highlight); font-weight: bold; }
+        .detail-btn { display: block; text-align: center; background: #233554; color: var(--highlight); text-decoration: none; padding: 10px; border-radius: 8px; margin-top: 10px; border: 1px solid var(--highlight); font-weight: bold; }
     </style>
 </head>
 <body>
@@ -29,8 +29,7 @@
                 <div class="info-title">GPS: ${lat.toFixed(4)}, ${lng.toFixed(4)}</div>
                 <div id="sun-box">🌅 日出 讀取中...</div>
                 <div id="weather-box">📡 氣象 讀取中...</div>
-                <div id="tide-box">🌊 潮汐 讀取中...</div>
-                <a href="detail.html" class="detail-btn">📊 查看 24h 詳細海象預報</a>
+                <a href="detail.html" class="detail-btn">🌊 查看詳細潮汐與咬況</a>
             `;
             L.popup().setLatLng(e.latlng).setContent(popupHtml).openOn(map);
 
@@ -46,28 +45,6 @@
                 .then(res => res.json()).then(data => {
                     const w = data.records.Station[0].WeatherElement;
                     document.getElementById('weather-box').innerHTML = `📡 風速 <span class="val">${w.WindSpeed} m/s</span> | 氣溫 <span class="val">${w.AirTemperature}°C</span>`;
-                });
-
-            // 3. 潮汐解析強化版 (F-A0021-001)
-            fetch(`https://opendata.cwa.gov.tw/api/v1/rest/datastore/F-A0021-001?Authorization=${API_KEY}`)
-                .then(res => res.json()).then(data => {
-                    try {
-                        // 自動尋找包含「臺南」的地點和包含「安平」的測站
-                        const loc = data.records.Location.find(l => l.LocationName.includes("臺南"));
-                        const sta = loc.Station.find(s => s.StationName.includes("安平"));
-                        
-                        const now = new Date();
-                        const nextTide = sta.TideForecast.TimePeriods.find(t => new Date(t.DateTime) > now);
-                        
-                        if (nextTide) {
-                            const timeStr = nextTide.DateTime.split('T')[1].substring(0, 5);
-                            document.getElementById('tide-box').innerHTML = `🌊 下次 <span class="val">${nextTide.TideType}</span>：${timeStr}`;
-                        }
-                    } catch (err) {
-                        document.getElementById('tide-box').innerHTML = "⚠️ 找不到測站，請點擊詳細資料";
-                    }
-                }).catch(() => {
-                    document.getElementById('tide-box').innerHTML = "❌ 潮汐 API 連線失敗";
                 });
         });
     </script>
