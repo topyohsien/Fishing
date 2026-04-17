@@ -12,16 +12,15 @@
         .controls { background: var(--card); padding: 15px; border-radius: 12px; margin-bottom: 20px; border: 1px solid #233554; }
         .loc-info { font-size: 1.1rem; margin-bottom: 5px; color: #ff6b6b; font-weight: bold; }
         input[type="date"] { 
-            width: 100%; padding: 10px; border-radius: 8px; background: #233554; 
+            width: 100%; padding: 12px; border-radius: 8px; background: #233554; 
             color: var(--highlight); border: 1px solid var(--highlight); font-size: 1rem; box-sizing: border-box; margin-top: 10px;
         }
-        .lure-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 15px; font-size: 0.9rem; }
-        .stat-box { background: rgba(100, 255, 218, 0.05); padding: 8px; border-radius: 6px; border: 1px solid #233554; }
+        .lure-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 15px; }
+        .stat-box { background: rgba(100, 255, 218, 0.05); padding: 10px; border-radius: 8px; border: 1px solid #233554; }
         .stat-label { color: #8892b0; display: block; font-size: 0.75rem; }
-        .stat-val { color: var(--highlight); font-weight: bold; }
+        .stat-val { color: var(--highlight); font-weight: bold; font-size: 1.1rem; }
         .chart-container { background: var(--card); border-radius: 12px; padding: 15px; margin-bottom: 20px; border: 1px solid #233554; }
-        .fish-icons { font-size: 1.3rem; color: var(--highlight); margin-bottom: 5px; text-align: right; }
-        table { width: 100%; border-collapse: collapse; background: var(--card); border-radius: 12px; overflow: hidden; margin-top: 10px; }
+        table { width: 100%; border-collapse: collapse; background: var(--card); border-radius: 12px; overflow: hidden; }
         th, td { padding: 12px 8px; text-align: center; border-bottom: 1px solid #233554; font-size: 13px; }
         th { background: #1d3557; color: var(--highlight); }
         .hot-time { background: rgba(255, 107, 107, 0.1); color: #ff6b6b; font-weight: bold; }
@@ -30,45 +29,95 @@
 <body>
     <a href="map.html" class="back-btn">← 返回地圖</a>
     <div class="controls">
-        <div id="location-name" class="loc-info">📍 正在讀取安平資料...</div>
+        <div id="location-name" class="loc-info">📍 正在讀取安平測站...</div>
         <input type="date" id="date-picker">
         <div class="lure-stats">
-            <div class="stat-box"><span class="stat-label">母光時刻</span><span id="sunrise-val" class="stat-val">05:36</span></div>
-            <div class="stat-box"><span class="stat-label">黃昏時刻</span><span id="sunset-val" class="stat-val">18:21</span></div>
+            <div class="stat-box"><span class="stat-label">母光</span><span class="stat-val">05:36</span></div>
+            <div class="stat-box"><span class="stat-label">黃昏</span><span class="stat-val">18:21</span></div>
             <div class="stat-box"><span class="stat-label">當日潮差</span><span id="tide-diff" class="stat-val">--</span> cm</div>
-            <div class="stat-box"><span class="stat-label">流速預估</span><span id="current-speed" class="stat-val">--</span></div>
+            <div class="stat-box"><span class="stat-label">咬況預估</span><span id="current-speed" class="stat-val">--</span></div>
         </div>
     </div>
     <div class="chart-container">
-        <div class="fish-icons" id="fish-rank">🐟🐟🐟</div>
-        <div style="font-size:0.9rem; margin-bottom:10px;">🎣 安平路亞活躍預測 (Jigging)</div>
+        <div style="font-size:0.9rem; margin-bottom:10px; color: var(--highlight);">🎣 路亞活躍時段預測 (依流速與光線)</div>
         <canvas id="lureChart"></canvas>
     </div>
     <table>
-        <thead><tr><th>時間</th><th>潮位</th><th>活躍度</th></tr></thead>
-        <tbody id="data-table"><tr><td colspan="3">⏳ 正在連線氣象署...</td></tr></tbody>
+        <thead><tr><th>時間</th><th>潮位高度</th><th>釣果預測</th></tr></thead>
+        <tbody id="data-table"><tr><td colspan="3">⏳ 正在與氣象署同步數據...</td></tr></tbody>
     </table>
 
     <script>
         const API_KEY = 'CWA-337BBD8F-DBC8-4D8D-A92F-DAA5B176120A';
         const datePicker = document.getElementById('date-picker');
         let myChart = null;
-
-        // 設定初始日期
         datePicker.value = new Date().toISOString().split('T')[0];
 
         async function fetchLureData() {
             try {
-                // 1. 抓取潮汐預報
-                const response = await fetch(`https://opendata.cwa.gov.tw/api/v1/rest/datastore/F-A0021-001?Authorization=${API_KEY}`);
-                const data = await response.json();
+                const res = await fetch(`https://opendata.cwa.gov.tw/api/v1/rest/datastore/F-A0021-001?Authorization=${API_KEY}`);
+                const data = await res.json();
                 
-                // 2. 修正：精確定位「臺南市 -> 安平」測站
-                const tainan = data.records.Location.find(l => l.LocationName === "臺南市");
-                const anping = tainan.Station.find(s => s.StationName === "安平");
-                
-                // 3. 過濾所選日期的潮汐時段
+                // 強化匹配邏輯
+                const tainan = data.records.Location.find(l => l.LocationName.includes("臺南"));
+                const anping = tainan.Station.find(s => s.StationName.includes("安平"));
                 const dailyTide = anping.TideForecast.TimePeriods.filter(t => t.DateTime.startsWith(datePicker.value));
 
                 if (dailyTide.length === 0) {
-                    document.getElementById('data-table').innerHTML = '<tr><td colspan="3">❌ 此
+                    document.getElementById('data-table').innerHTML = '<tr><td colspan="3">❌ 該日期無預報資料</td></tr>';
+                    return;
+                }
+
+                const heights = dailyTide.map(d => parseInt(d.TideHeight));
+                const tideDiff = Math.max(...heights) - Math.min(...heights);
+                document.getElementById('tide-diff').innerText = tideDiff;
+                document.getElementById('current-speed').innerText = tideDiff > 100 ? "大補" : "普通";
+                document.getElementById('location-name').innerText = `📍 安平釣區 (潮差 ${tideDiff}cm)`;
+
+                renderLure(dailyTide, tideDiff);
+            } catch (e) {
+                document.getElementById('data-table').innerHTML = '<tr><td colspan="3">⚠️ API 讀取失敗，請確認網路與權限</td></tr>';
+            }
+        }
+
+        function renderLure(dailyTide, tideDiff) {
+            const labels = dailyTide.map(d => d.DateTime.split('T')[1].substring(0, 5));
+            const scores = dailyTide.map(d => {
+                let s = 50; 
+                const t = d.DateTime.split('T')[1].substring(0, 5);
+                if (t.startsWith("05") || t.startsWith("06") || t.startsWith("18")) s += 35; // 晨昏加成
+                if (tideDiff > 100) s += 10;
+                return s;
+            });
+
+            const ctx = document.getElementById('lureChart').getContext('2d');
+            if (myChart) myChart.destroy();
+            myChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        data: scores,
+                        borderColor: '#64ffda',
+                        backgroundColor: 'rgba(100, 255, 218, 0.1)',
+                        fill: true,
+                        tension: 0.4
+                    }]
+                },
+                options: { scales: { y: { display: false }, x: { ticks: { color: '#8892b0' } } }, plugins: { legend: { display: false } } }
+            });
+
+            document.getElementById('data-table').innerHTML = dailyTide.map((t, i) => `
+                <tr class="${scores[i] >= 85 ? 'hot-time' : ''}">
+                    <td>${labels[i]}</td>
+                    <td>${t.TideType} (${t.TideHeight}cm)</td>
+                    <td>${scores[i] >= 85 ? '🔥 爆咬期' : '🎣 穩定'}</td>
+                </tr>
+            `).join('');
+        }
+
+        datePicker.addEventListener('change', fetchLureData);
+        fetchLureData();
+    </script>
+</body>
+</html>
