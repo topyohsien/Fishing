@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>綠島台東·冒險指南(氣象版)</title>
+    <title>綠島台東·高雄出發指南</title>
     <style>
         :root { --main: #0077b6; --bg: #f4f7f6; --accent: #ff6b6b; --fishing: #fb8500; --green: #2d6a4f; --sun: #f9c74f; --weather: #48cae4; }
         body { font-family: sans-serif; background: var(--bg); padding: 15px; margin: 0; line-height: 1.5; }
@@ -25,6 +25,7 @@
         .fishing-box { background: #fff3e0; border: 1px solid var(--fishing); padding: 10px; border-radius: 8px; margin: 10px 0; }
         .fishing-title { color: var(--fishing); font-weight: bold; font-size: 0.9rem; margin-bottom: 5px; display: block; }
         
+        .section-title { font-size: 0.9rem; color: var(--green); font-weight: bold; margin: 15px 0 8px 0; display: block; }
         .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
         .btn { background: #fff; border: 1px solid #ddd; padding: 8px; border-radius: 8px; font-size: 13px; text-align: center; color: #444; text-decoration: none; display: block; }
         .alert { color: var(--accent); font-size: 12px; font-weight: bold; margin-top: 5px; }
@@ -32,22 +33,22 @@
 </head>
 <body>
 
-<h3 style="text-align:center; color: var(--main);">🎣 綠島台東 5/1 - 5/4 冒險指令</h3>
+<h3 style="text-align:center; color: var(--main);">🎣 綠島台東 5/1 - 5/4 指令 (高雄出發)</h3>
 
 <div class="weather-banner">
-    <span class="weather-title">📡 901/903 氣象海象即時預警 (5/1 - 5/4)</span>
+    <span class="weather-title">📡 901/903 氣象海象動態預警 (5/1 - 5/4)</span>
     <div class="weather-grid">
         <div class="weather-item">
             <b>📍 綠島海域</b><br>
             風向：偏東風 4-5 級<br>
             浪高：1.2m - 1.8m<br>
-            ⚠️ 長浪預警：無
+            ⚠️ 長浪預警：暫無
         </div>
         <div class="weather-item">
             <b>🌡️ 氣溫預報</b><br>
-            台東：26°C - 31°C<br>
+            高雄：27°C - 32°C<br>
             綠島：25°C - 30°C<br>
-            降雨率：10% (晴時多雲)
+            降雨率：10% (晴)
         </div>
         <div class="weather-item">
             <b>🌊 潮汐 (5/2 綠島)</b><br>
@@ -65,40 +66,52 @@
 
 <div class="day-tab">
     <div class="day-header" onclick="toggleDay(this)">
-        <span>5/1 (五) 善化 ➔ 高雄 ➔ 綠島</span>
+        <span>5/1 (五) 出發：善化 ➔ 高雄 ➔ 綠島</span>
         <span>展開 ▼</span>
     </div>
     <div class="day-content">
-        <div class="sun-box"><span>🌅 日出 05:22</span> <span>🌇 日落 18:24</span></div>
+        <div class="sun-box">
+            <span>🌅 日出 05:22</span> <span>🌇 日落 18:24</span>
+        </div>
         <div class="nav-box">
-            <span style="color: #d62828; font-weight: bold;">🚗 04:10 善化出發</span>
-            <a class="nav-item" href="https://www.google.com/maps/search/高雄火車站停車場">🅿️ 建議停車：高雄車站地下停車場</a>
-            <a class="nav-item" href="https://www.google.com/maps/search/高雄火車站">🚆 05:35 高雄發車 (411次)</a>
-            <a class="nav-item" href="https://www.google.com/maps/search/富岡漁港">🚢 09:00 富岡發船</a>
+            <span style="color: #d62828; font-weight: bold;">🚗 04:10 善化開車出發</span>
+            <a class="nav-item" href="https://www.google.com/maps/search/高雄火車站停車場">🅿️ 建議停車：高雄車站西側/地下停車場</a>
+            <a class="nav-item" href="https://www.google.com/maps/search/高雄火車站">🚆 05:35 高雄發車 (411次自強)</a>
+            <a class="nav-item" href="https://www.google.com/maps/search/台東火車站">🚆 07:40 抵達台東</a>
+            <a class="nav-item" href="https://www.google.com/maps/search/富岡漁港">🚢 09:00 富岡發船 (綠星2號)</a>
             <div class="alert">💊 重要：08:00 記得服用第一劑暈船藥。</div>
+            <div class="alert">🏠 住宿：綠島有風小院</div>
         </div>
         <div class="fishing-box">
-            <span class="fishing-title">🎣 岸拋路亞推薦釣點</span>
+            <span class="fishing-title">🎣 岸拋路亞熱點</span>
             <div class="grid">
                 <a class="btn" style="border-color: var(--fishing)" href="https://www.google.com/maps/search/綠島南寮紅燈塔">南寮紅燈塔</a>
                 <a class="btn" style="border-color: var(--fishing)" href="https://www.google.com/maps/search/綠島公館外堤">公館外堤</a>
             </div>
         </div>
+        <span class="section-title">🍴 綠島美食 (10項)</span>
+        <div class="grid">
+            <a class="btn" href="https://www.google.com/maps/search/阿剛碳烤">阿剛碳烤</a><a class="btn" href="https://www.google.com/maps/search/非炒不可">非炒不可</a>
+            <a class="btn" href="https://www.google.com/maps/search/只有海餐廳">只有海</a><a class="btn" href="https://www.google.com/maps/search/梅花鹿專賣店">梅花鹿專賣</a>
+            <a class="btn" href="https://www.google.com/maps/search/歸宿鹿肉麵">歸宿鹿肉麵</a><a class="btn" href="https://www.google.com/maps/search/野浪也浪漢堡">野浪也浪</a>
+            <a class="btn" href="https://www.google.com/maps/search/ㄞˋ轉角鹹酥雞">ㄞˋ轉角</a><a class="btn" href="https://www.google.com/maps/search/竹屋美食城">竹屋美食</a>
+            <a class="btn" href="https://www.google.com/maps/search/熱浪美食">熱浪美食</a><a class="btn" href="https://www.google.com/maps/search/羅師傅料理">羅師傅</a>
         </div>
+    </div>
 </div>
 
 <div class="day-tab">
     <div class="day-header" onclick="toggleDay(this)">
-        <span>5/2 (六) 朝日溫泉日出 / 根魚釣點</span>
+        <span>5/2 (六) 綠島：朝日日出與深度遊</span>
         <span>展開 ▼</span>
     </div>
     <div class="day-content">
         <div class="sun-box" style="background: #ffe5d9; border-color: var(--accent);">
-            <span>🌅 日出 05:21 (最佳觀賞時機)</span> <span>🌇 日落 18:25</span>
+            <span>🌅 日出 05:21 (朝日溫泉)</span> <span>🌇 日落 18:25</span>
         </div>
         <div class="nav-box">
-            <a class="nav-item" href="https://www.google.com/maps/search/綠島朝日溫泉">♨️ 04:30 抵達朝日溫泉</a>
-            <div class="alert">🌙 04:00 出發。適逢乾潮轉滿潮，日出倒影最美。</div>
+            <a class="nav-item" href="https://www.google.com/maps/search/綠島朝日溫泉">♨️ 04:30 前抵達朝日溫泉</a>
+            <div class="alert">🌙 04:00 出發。適逢乾潮轉滿潮，迎接第一道曙光。</div>
         </div>
         <div class="fishing-box">
             <span class="fishing-title">🎣 根魚小搞搞推薦</span>
@@ -107,19 +120,62 @@
                 <a class="btn" style="border-color: var(--fishing)" href="https://www.google.com/maps/search/綠島中寮港">中寮港</a>
             </div>
         </div>
+        <span class="section-title">📸 綠島景點 (10項)</span>
+        <div class="grid">
+            <a class="btn" href="https://www.google.com/maps/search/綠島燈塔">綠島燈塔</a><a class="btn" href="https://www.google.com/maps/search/朝日溫泉">朝日溫泉</a>
+            <a class="btn" href="https://www.google.com/maps/search/綠島小長城">小長城</a><a class="btn" href="https://www.google.com/maps/search/綠島大白沙">大白沙</a>
+            <a class="btn" href="https://www.google.com/maps/search/柴口浮潛">柴口浮潛</a><a class="btn" href="https://www.google.com/maps/search/綠島監獄">綠島監獄</a>
+            <a class="btn" href="https://www.google.com/maps/search/觀音洞">觀音洞</a><a class="btn" href="https://www.google.com/maps/search/睡美人岩">睡美人岩</a>
+            <a class="btn" href="https://www.google.com/maps/search/牛頭山">牛頭山夕陽</a><a class="btn" href="https://www.google.com/maps/search/綠島藍洞">藍洞秘境</a>
+        </div>
     </div>
 </div>
 
 <div class="day-tab">
     <div class="day-header" onclick="toggleDay(this)">
-        <span>5/3 & 5/4 返回台東與賦歸</span>
+        <span>5/3 (日) 綠島 ➔ 台東 (尋找住宿)</span>
         <span>展開 ▼</span>
     </div>
     <div class="day-content">
+        <div class="sun-box">
+            <span>🌅 日出 05:21</span> <span>🌇 日落 18:25</span>
+        </div>
         <div class="nav-box">
-            <a class="nav-item" href="#">🚢 5/3 16:30 綠島發車 (逆浪請服藥)</a>
-            <a class="nav-item" href="#">🚆 5/4 16:00 台東發車 (168次)</a>
-            <span style="color: #d62828; font-weight: bold;">🚗 預計 19:15 回到善化</span>
+            <a class="nav-item" href="https://www.google.com/maps/search/綠島南寮漁港">🚢 16:30 綠島發船 (天王星)</a>
+            <div class="alert">💊 提醒：回程逆浪較晃，15:30 記得服藥。</div>
+        </div>
+        <span class="section-title">🛍️ 伴手禮推薦 (10項)</span>
+        <div class="grid">
+            <a class="btn" href="https://www.google.com/maps/search/大哥的店">大哥的店</a><a class="btn" href="https://www.google.com/maps/search/楊記地瓜酥">楊記地瓜酥</a>
+            <a class="btn" href="https://www.google.com/maps/search/陳記麻糬">陳記麻糬</a><a class="btn" href="https://www.google.com/maps/search/青澤琪瑪酥">青澤琪瑪酥</a>
+            <a class="btn" href="https://www.google.com/maps/search/歐巴螞寒單餅">歐巴螞</a><a class="btn" href="https://www.google.com/maps/search/台東縣農會">台東農會</a>
+            <a class="btn" href="https://www.google.com/maps/search/吳家媽媽地瓜酥">吳家媽媽</a><a class="btn" href="https://www.google.com/maps/search/志安餅舖">志安餅舖</a>
+            <a class="btn" href="https://www.google.com/maps/search/信合伴手禮">信合伴手禮</a><a class="btn" href="https://www.google.com/maps/search/連城記">連城記</a>
+        </div>
+    </div>
+</div>
+
+<div class="day-tab">
+    <div class="day-header" onclick="toggleDay(this)">
+        <span>5/4 (一) 台東 ➔ 高雄 ➔ 善化 賦歸</span>
+        <span>展開 ▼</span>
+    </div>
+    <div class="day-content">
+        <div class="sun-box">
+            <span>🌅 日出 05:20</span> <span>🌇 日落 18:26</span>
+        </div>
+        <div class="nav-box">
+            <a class="nav-item" href="https://www.google.com/maps/search/台東火車站">🚆 16:00 台東發車 (168次自強)</a>
+            <a class="nav-item" href="https://www.google.com/maps/search/高雄火車站">🚆 17:46 抵達高雄火車站</a>
+            <span style="color: #d62828; font-weight: bold;">🚗 預計 19:15 抵達善化</span>
+        </div>
+        <span class="section-title">🍴 台東市區美食 (10項)</span>
+        <div class="grid">
+            <a class="btn" href="https://www.google.com/maps/search/阿鋐炸雞">阿鋐炸雞</a><a class="btn" href="https://www.google.com/maps/search/卑南豬血湯">卑南豬血湯</a>
+            <a class="btn" href="https://www.google.com/maps/search/林家臭豆腐">林家臭豆腐</a><a class="btn" href="https://www.google.com/maps/search/榕樹下米苔目">榕樹下米苔目</a>
+            <a class="btn" href="https://www.google.com/maps/search/藍螞蟻炸雞">藍螞蟻炸雞</a><a class="btn" href="https://www.google.com/maps/search/久昂臭豆腐">久昂臭豆腐</a>
+            <a class="btn" href="https://www.google.com/maps/search/神農飲品">神農飲品</a><a class="btn" href="https://www.google.com/maps/search/老東台米苔目">老東台米苔目</a>
+            <a class="btn" href="https://www.google.com/maps/search/寶桑豆花">寶桑豆花</a><a class="btn" href="https://www.google.com/maps/search/叮叮炸雞">叮叮炸雞</a>
         </div>
     </div>
 </div>
