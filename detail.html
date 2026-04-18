@@ -18,18 +18,14 @@
     </style>
 </head>
 <body>
-    <div style="margin-bottom:15px;">
-        <a href="javascript:location.reload()" style="color:var(--highlight); text-decoration:none; font-weight:bold;">🔄 刷新數據</a>
-    </div>
+    <div style="margin-bottom:15px;"><a href="javascript:location.reload()" style="color:var(--highlight); text-decoration:none; font-weight:bold;">🔄 刷新數據</a></div>
     
     <div class="card">
         <div id="status-title" class="highlight" style="font-size:1.1rem;">📍 數據載入中...</div>
-        <div id="bite-hint" style="margin-top:10px; font-size:0.9rem;">咬況預估：<span class="highlight">正在分析潮位趨勢...</span></div>
+        <div id="bite-hint" style="margin-top:10px; font-size:0.9rem;">咬況預估：<span class="highlight">分析中...</span></div>
     </div>
 
-    <div class="card">
-        <canvas id="tideChart"></canvas>
-    </div>
+    <div class="card"><canvas id="tideChart"></canvas></div>
 
     <table>
         <thead><tr><th>時間</th><th>潮高</th><th>類型</th><th>路亞熱點</th></tr></thead>
@@ -38,118 +34,85 @@
 
     <script>
         const API_KEY = 'CWA-337BBD8F-DBC8-4D8D-A92F-DAA5B176120A';
-        const today = new Date().toISOString().split('T')[0];
+        const today = new Date().toLocaleDateString('en-CA'); // 取得 YYYY-MM-DD
 
         async function fetchTide() {
             try {
-                // 請求氣象署 API (未來兩天精細預報)
                 const res = await fetch(`https://opendata.cwa.gov.tw/api/v1/rest/datastore/F-A0021-001?Authorization=${API_KEY}`);
-                if (!res.ok) throw new Error(`HTTP 錯誤: ${res.status}`);
-                
                 const data = await res.json();
                 
-                // --- 核心容錯邏輯：自動偵測資料層級 ---
-                const records = data.records;
-                const locations = records?.tideForecasts?.location || records?.Location || records?.location;
+                // --- 暴力搜尋邏輯：直接找出含有安平的物件 ---
+                let allLocations = [];
+                if (data.records.tideForecasts) allLocations = data.records.tideForecasts.location;
+                else if (data.records.Location) allLocations = data.records.Location;
+                else if (data.records.location) allLocations = data.records.location;
 
-                if (!locations) {
-                    console.error("收到的資料結構:", data);
-                    throw new Error("無法定位資料路徑 (Location undefined)");
-                }
-
-                // 搜尋安平測站
-                const anping = locations.find(l => 
+                const anping = allLocations.find(l => 
                     (l.stationName && l.stationName.includes("安平")) || 
-                    (l.locationName && l.locationName.includes("臺南"))
+                    (l.LocationName && l.LocationName.includes("臺南"))
                 );
 
-                if (!anping) throw new Error("找不到安平測站數據");
+                if (!anping) throw new Error("找不到安平測站，請檢查 API 回傳內容");
 
-                // 取得預報週期 (處理大小寫與層級)
-                const forecastObj = anping.tideForecast || anping.TideForecast;
-                const periods = forecastObj?.tidePeriod || forecastObj?.TimePeriods;
+                // 取得潮汐資料數組
+                const forecast = anping.tideForecast || anping.TideForecast;
+                const periods = forecast.tidePeriod || forecast.TimePeriods;
 
-                if (!periods) throw new Error("找不到潮汐週期數據 (tidePeriod undefined)");
-
-                // 篩選今日資料
+                // 篩選今日
                 const daily = periods.filter(p => {
                     const t = p.tideTime || p.DateTime;
-                    return t && t.startsWith(today);
+                    return t.startsWith(today);
                 });
 
-                if (daily.length === 0) throw new Error("今日無預報資料");
+                if (daily.length === 0) throw new Error("今日無預報，請確認 API 日期範圍");
 
-                // 計算潮差
-                const heights = daily.map(d => parseInt(d.tideHeight || d.TideHeight || 0));
-                const diff = Math.max(...heights) - Math.min(...heights);
-
-                // 更新介面
-                document.getElementById('status-title').innerText = `📍 安平港 (${anping.stationName}) - 潮差: ${diff}cm`;
-                document.getElementById('bite-hint').innerHTML = diff > 100 
-                    ? "咬況預估：<span class='highlight'>🔥 大潮活躍 (Jigging / 青物時機)</span>" 
-                    : "咬況預估：<span>🎣 穩定中/小潮 (路亞泛用)</span>";
+                // 渲染 UI
+                const hArr = daily.map(d => parseInt(d.tideHeight || d.TideHeight));
+                const diff = Math.max(...hArr) - Math.min(...hArr);
+                
+                document.getElementById('status-title').innerText = `📍 安平港 - 今日潮差 ${diff}cm`;
+                document.getElementById('bite-hint').innerHTML = diff > 100 ? "咬況預估：<span class='highlight'>🔥 大潮活躍</span>" : "咬況預估：<span>🎣 穩定普通</span>";
 
                 render(daily);
             } catch (err) {
-                console.error("詳細錯誤訊息:", err);
                 document.getElementById('tide-table').innerHTML = `<tr><td colspan="4" style="color:#ff6b6b; padding:20px;">❌ 載入失敗<br><small>${err.message}</small></td></tr>`;
             }
         }
 
         function render(list) {
-            // 解析時間標籤
-            const labels = list.map(d => {
-                const t = d.tideTime || d.DateTime;
-                return t.includes(' ') ? t.split(' ')[1].substring(0, 5) : t.split('T')[1].substring(0, 5);
-            });
-            const heights = list.map(d => d.tideHeight || d.TideHeight);
+            const labels = list.map(d => (d.tideTime || d.DateTime).split(/[ T]/)[1].substring(0, 5));
+            const heights = list.map(d => (d.tideHeight || d.TideHeight));
 
-            // 清除舊圖表 (防止重複渲染)
-            const ctx = document.getElementById('tideChart').getContext('2d');
-            if (window.myChart) window.myChart.destroy();
-
-            window.myChart = new Chart(ctx, {
+            new Chart(document.getElementById('tideChart'), {
                 type: 'line',
                 data: {
                     labels: labels,
                     datasets: [{
-                        label: '潮位 (cm)',
+                        label: '潮高',
                         data: heights,
                         borderColor: '#64ffda',
                         backgroundColor: 'rgba(100, 255, 218, 0.1)',
-                        fill: true,
-                        tension: 0.4,
-                        pointBackgroundColor: '#64ffda'
+                        fill: true, tension: 0.4
                     }]
                 },
                 options: { 
                     plugins: { legend: { display: false } },
-                    scales: { 
-                        y: { grid: { color: '#233554' }, ticks: { color: '#8892b0' } },
-                        x: { grid: { display: false }, ticks: { color: '#8892b0' } }
-                    }
+                    scales: { y: { grid: {color: '#233554'}, ticks: {color: '#8892b0'} }, x: { ticks: {color: '#8892b0'} } }
                 }
             });
 
-            // 填充表格
             document.getElementById('tide-table').innerHTML = list.map(d => {
-                const t = d.tideTime || d.DateTime;
-                const timeStr = t.includes(' ') ? t.split(' ')[1].substring(0, 5) : t.split('T')[1].substring(0, 5);
-                const hour = parseInt(timeStr.split(':')[0]);
-                // 黃金時段：05-07點(母光), 17-19點(夕光)
+                const time = (d.tideTime || d.DateTime).split(/[ T]/)[1].substring(0, 5);
+                const hour = parseInt(time.split(':')[0]);
                 const isGolden = (hour >= 5 && hour <= 7) || (hour >= 17 && hour <= 19);
-                
-                return `
-                    <tr class="${isGolden ? 'hot' : ''}">
-                        <td>${timeStr}</td>
-                        <td>${d.tideHeight || d.TideHeight}cm</td>
-                        <td>${d.tideType || d.TideType || '一般'}</td>
-                        <td>${isGolden ? '🔥 黃金母光' : '-'}</td>
-                    </tr>
-                `;
+                return `<tr class="${isGolden ? 'hot' : ''}">
+                    <td>${time}</td>
+                    <td>${d.tideHeight || d.TideHeight}cm</td>
+                    <td>${d.tideType || d.TideType}</td>
+                    <td>${isGolden ? '🔥 黃金時段' : '-'}</td>
+                </tr>`;
             }).join('');
         }
-
         fetchTide();
     </script>
 </body>
