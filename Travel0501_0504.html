@@ -2,125 +2,75 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <title>綠島台東·冒險手冊 (自動偵測版)</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>綠島台東·全能導覽手冊</title>
     <style>
-        :root { --main: #0077b6; --warn: #ff6b6b; --bg: #f4f7f6; --open: #1e8e3e; --closed: #d93025; }
+        :root { --main: #0077b6; --bg: #f4f7f6; --accent: #ff6b6b; }
         body { font-family: sans-serif; background: var(--bg); padding: 15px; margin: 0; }
-        .card { background: white; border-radius: 12px; padding: 15px; margin-bottom: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); cursor: pointer; transition: 0.3s; }
-        .card:hover { transform: translateY(-2px); }
-        .content { display: none; padding-top: 15px; border-top: 1px solid #eee; margin-top: 10px; }
-        .content.active { display: block; }
-        .location { font-size: 1.1rem; color: var(--main); font-weight: bold; display: flex; justify-content: space-between; }
-        .info-item { background: #f8f9fa; padding: 10px; border-radius: 8px; margin: 8px 0; font-size: 13px; border-left: 4px solid var(--main); }
-        .weather-tag { display: inline-block; background: #caf0f8; padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: bold; margin-bottom: 10px; }
-        .shop-card { border: 1px solid #eee; padding: 10px; border-radius: 8px; margin-top: 8px; }
-        .status { font-weight: bold; font-size: 12px; }
-        .alert { color: var(--warn); font-weight: bold; font-size: 13px; }
+        .card { background: white; border-radius: 12px; padding: 15px; margin-bottom: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+        .day-title { font-size: 1.1rem; color: var(--main); font-weight: bold; margin-bottom: 10px; border-bottom: 2px solid #eee; padding-bottom: 5px; }
+        .section-label { font-size: 0.85rem; color: #666; font-weight: bold; margin-top: 10px; display: block; }
+        .item-list { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 5px; }
+        .btn { 
+            background: white; border: 1px solid var(--main); color: var(--main); 
+            padding: 6px 12px; border-radius: 20px; font-size: 13px; text-decoration: none;
+            display: inline-block; transition: 0.2s;
+        }
+        .btn:active { background: var(--main); color: white; }
+        .weather-tag { background: #caf0f8; padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: bold; margin-bottom: 10px; display: block; width: fit-content; }
+        .alert { color: var(--accent); font-weight: bold; font-size: 12px; margin-top: 5px; }
     </style>
 </head>
 <body>
 
-    <h3 style="text-align:center;">🌴 綠島台東 · 5/1-5/4 冒險</h3>
+    <div class="card">
+        <div class="day-title">5/1 (五) 出發：台東 & 綠島</div>
+        <div class="weather-tag" id="w-501">📅 5/1 預報將於 4/24 左右開放</div>
+        <div class="alert">⚠️ 411次火車 07:40 到，09:00 船開 (接駁僅80分)</div>
+        
+        <span class="section-label">🍴 綠島美食推薦</span>
+        <div class="item-list">
+            <a class="btn" href="https://www.google.com/maps/search/?api=1&query=綠島阿剛碳烤" target="_blank">📍 阿剛碳烤</a>
+            <a class="btn" href="https://www.google.com/maps/search/?api=1&query=綠島非炒不可" target="_blank">📍 非炒不可海鮮</a>
+            <a class="btn" href="https://www.google.com/maps/search/?api=1&query=綠島只有海島嶼風格餐廳" target="_blank">📍 只有海餐廳</a>
+        </div>
 
-    <div class="card" onclick="toggle(this)">
-        <div class="location"><span>5/1 (五) 高雄 ➔ 綠島</span><span>▼</span></div>
-        <div id="weather-501" class="weather-tag">正在探測 091 API 結構...</div>
-        <div class="content">
-            <div class="info-item">🚆 411次 自強(3000) | 07:40 抵台東</div>
-            <div class="info-item">🚢 綠星2號 | 09:00 富岡開船</div>
-            <p class="alert">⚠️ 銜接僅 80 分鐘，請先預約計程車。</p>
-            <div class="shop-card">
-                <b>🍴 推薦：阿剛碳烤</b><br>
-                <span class="status" id="shop-1">偵測營業中...</span>
-            </div>
+        <span class="section-label">📸 綠島必去景點</span>
+        <div class="item-list">
+            <a class="btn" href="https://www.google.com/maps/search/?api=1&query=綠島燈塔" target="_blank">🎡 綠島燈塔</a>
+            <a class="btn" href="https://www.google.com/maps/search/?api=1&query=朝日溫泉" target="_blank">♨️ 朝日溫泉</a>
         </div>
     </div>
 
-    <div class="card" onclick="toggle(this)">
-        <div class="location"><span>5/2 (六) 綠島深度遊</span><span>▼</span></div>
-        <div class="weather-tag">氣候穩定分析中</div>
-        <div class="content">
-            <div class="info-item">🚲 建議行程：朝日溫泉、浮潛</div>
-            <div class="shop-card">
-                <b>🍧 推薦：甘泉小站 (海草冰)</b><br>
-                <span class="status" id="shop-2">偵測營業中...</span>
-            </div>
+    <div class="card">
+        <div class="day-title">5/2 (六) 綠島深度探索</div>
+        <span class="section-label">🍴 綠島特色消暑</span>
+        <div class="item-list">
+            <a class="btn" href="https://www.google.com/maps/search/?api=1&query=綠島甘泉小站" target="_blank">🍧 甘泉小站</a>
+            <a class="btn" href="https://www.google.com/maps/search/?api=1&query=派吃所冰店" target="_blank">🍧 派吃所海草冰</a>
+        </div>
+        <span class="section-label">📸 絕美風景區</span>
+        <div class="item-list">
+            <a class="btn" href="https://www.google.com/maps/search/?api=1&query=綠島小長城" target="_blank">🧱 綠島小長城</a>
+            <a class="btn" href="https://www.google.com/maps/search/?api=1&query=藍洞浮潛" target="_blank">🤿 翠湖/藍洞</a>
         </div>
     </div>
 
-    <div class="card" onclick="toggle(this)">
-        <div class="location"><span>5/3 (日) 綠島 ➔ 台東</span><span>▼</span></div>
-        <div id="weather-503" class="weather-tag">正在探測 093 API 結構...</div>
-        <div class="content">
-            <div class="info-item">🚢 天王星21 | 16:30 綠島 ➔ 17:30 富岡</div>
-            <p>🏠 入住：台東市區 (有風小院)。</p>
-            <p class="alert">💊 回程海上湧浪大，建議 30 分鐘前服藥。</p>
+    <div class="card">
+        <div class="day-title">5/3 (日) 返回台東</div>
+        <div class="alert">🚢 16:30 綠島 ➔ 17:30 富岡</div>
+        <span class="section-label">🍴 台東晚餐/宵夜</span>
+        <div class="item-list">
+            <a class="btn" href="https://www.google.com/maps/search/?api=1&query=台東阿鋐炸雞" target="_blank">🍗 阿鋐炸雞</a>
+            <a class="btn" href="https://www.google.com/maps/search/?api=1&query=卑南豬血湯" target="_blank">🥣 卑南豬血湯</a>
+            <a class="btn" href="https://www.google.com/maps/search/?api=1&query=林家臭豆腐" target="_blank">🥢 林家臭豆腐</a>
+        </div>
+        <span class="section-label">🌃 夜間漫步</span>
+        <div class="item-list">
+            <a class="btn" href="https://www.google.com/maps/search/?api=1&query=鐵花村音樂聚落" target="_blank">🏮 鐵花村</a>
         </div>
     </div>
 
-    <div class="card" onclick="toggle(this)">
-        <div class="location"><span>5/4 (一) 台東 ➔ 高雄</span><span>▼</span></div>
-        <div id="weather-504" class="weather-tag">歸途天氣監控</div>
-        <div class="content">
-            <div class="info-item">🚆 168次 自強(3000) | 16:00 台東發車</div>
-            <div class="shop-card">
-                <b>🎁 伴手禮：楊記地瓜酥 (中正店)</b><br>
-                <span class="status" id="shop-3">偵測營業中...</span>
-            </div>
-        </div>
-    </div>
-
-    <script>
-        const CWA_KEY = 'CWA-337BBD8F-DBC8-4D8D-A92F-DAA5B176120A';
-
-        function toggle(card) {
-            const content = card.querySelector('.content');
-            content.classList.toggle('active');
-        }
-
-        // 1. 先抓取 2000 筆資料確認結構
-        async function probeStructure() {
-            try {
-                const res = await fetch(`https://opendata.cwa.gov.tw/api/v1/rest/datastore/F-D0047-091?Authorization=${CWA_KEY}&limit=2000`);
-                const data = await res.json();
-                
-                // 自動尋找 locations 陣列路徑
-                const locs = data.records.locations[0].location;
-                const taitung = locs.find(l => l.locationName === "臺東縣");
-                
-                if (taitung) {
-                    document.getElementById('weather-501').innerHTML = `✅ API 已連線：${taitung.locationName} 預報就緒`;
-                }
-            } catch (e) {
-                document.getElementById('weather-501').innerText = "❌ 氣象 API 路徑匹配失敗";
-            }
-        }
-
-        // 2. 模擬 Google Map 營業時間判定 (根據一般營業時段)
-        function updateShopStatus() {
-            const now = new Date();
-            const hour = now.getHours();
-            
-            // 阿剛碳烤 (17:30 - 22:00)
-            const s1 = document.getElementById('shop-1');
-            if (hour >= 17 && hour < 22) { s1.innerHTML = "● 營業中"; s1.style.color = "var(--open)"; }
-            else { s1.innerHTML = "● 休息中 (17:30開始)"; s1.style.color = "var(--closed)"; }
-
-            // 甘泉小站 (10:00 - 18:00)
-            const s2 = document.getElementById('shop-2');
-            if (hour >= 10 && hour < 18) { s2.innerHTML = "● 營業中"; s2.style.color = "var(--open)"; }
-            else { s2.innerHTML = "● 休息中"; s2.style.color = "var(--closed)"; }
-
-            // 楊記地瓜酥 (09:00 - 21:00)
-            const s3 = document.getElementById('shop-3');
-            if (hour >= 9 && hour < 21) { s3.innerHTML = "● 營業中"; s3.style.color = "var(--open)"; }
-            else { s3.innerHTML = "● 休息中"; s3.style.color = "var(--closed)"; }
-        }
-
-        window.onload = () => {
-            probeStructure();
-            updateShopStatus();
-        };
-    </script>
-</body>
-</html>
+    <div class="card">
+        <div class="day-title">5/4 (一) 台東賦歸</div>
+        <span class="section-
