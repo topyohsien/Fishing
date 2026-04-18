@@ -41,51 +41,48 @@
                 const res = await fetch(`https://opendata.cwa.gov.tw/api/v1/rest/datastore/F-A0021-001?Authorization=${API_KEY}`);
                 const data = await res.json();
                 
-                // 1. 深度搜尋：找出所有可能的 location 陣列
-                let locations = [];
-                if (data.records?.tideForecasts?.location) {
-                    locations = data.records.tideForecasts.location;
-                } else if (data.records?.Location) {
-                    locations = data.records.Location;
-                } else if (data.records?.location) {
-                    locations = data.records.location;
-                }
+                // 1. 取得所有地點 (考慮不同 API 版本)
+                let locations = data.records?.tideForecasts?.location || data.records?.Location || data.records?.location || [];
+                let targetStation = null;
 
-                // 2. 針對「安平」進行多層級比對
-                let targetStation = locations.find(l => 
-                    (l.stationName && l.stationName.includes("安平")) || 
-                    (l.locationName && l.locationName.includes("安平"))
-                );
-
-                // 如果第一層找不到，嘗試進入臺南市搜尋
-                if (!targetStation) {
-                    const tainan = locations.find(l => l.locationName && l.locationName.includes("臺南"));
-                    if (tainan && tainan.station) {
-                        targetStation = tainan.station.find(s => s.stationName.includes("安平"));
+                // 2. 深度遍歷搜尋「安平」
+                for (let loc of locations) {
+                    // 如果這層就是安平
+                    if (loc.stationName?.includes("安平") || loc.LocationName?.includes("安平")) {
+                        targetStation = loc;
+                        break;
+                    }
+                    // 如果安平藏在 Station 陣列裡 (台南市 -> 安平)
+                    if (loc.Station) {
+                        const s = loc.Station.find(st => st.StationName?.includes("安平") || st.stationName?.includes("安平"));
+                        if (s) {
+                            targetStation = s;
+                            break;
+                        }
                     }
                 }
 
-                if (!targetStation) throw new Error("測站列表匹配失敗");
+                if (!targetStation) throw new Error("測站列表匹配失敗，請檢查 API 權限");
 
-                // 3. 抓取潮汐預報
+                // 3. 取得預報資料
                 const forecast = targetStation.tideForecast || targetStation.TideForecast;
                 const periods = forecast?.tidePeriod || forecast?.TimePeriods;
 
                 if (!periods) throw new Error("找到測站但無預報內容");
 
-                // 4. 過濾今日
+                // 4. 過濾今日數據
                 const daily = periods.filter(p => {
                     const t = p.tideTime || p.DateTime;
                     return t && t.startsWith(today);
                 });
 
-                if (daily.length === 0) throw new Error("今日無預報，請確認 API 更新時間");
+                if (daily.length === 0) throw new Error("今日無預報資料");
 
                 // 5. 計算潮差
                 const hArr = daily.map(d => parseInt(d.tideHeight || d.TideHeight || 0));
                 const diff = Math.max(...hArr) - Math.min(...hArr);
                 
-                document.getElementById('status-title').innerText = `📍 安平港 - 今日潮差 ${diff}cm`;
+                document.getElementById('status-title').innerText = `📍 安平測站 - 今日潮差 ${diff}cm`;
                 document.getElementById('bite-hint').innerHTML = diff > 100 ? "咬況預估：<span class='highlight'>🔥 大潮活躍 (Jigging)</span>" : "咬況預估：<span>🎣 穩定普通</span>";
 
                 render(daily);
@@ -114,12 +111,16 @@
                 },
                 options: { 
                     plugins: { legend: { display: false } },
-                    scales: { y: { grid: {color: '#233554'}, ticks: {color: '#8892b0'} }, x: { ticks: {color: '#8892b0'} } }
+                    scales: { 
+                        y: { grid: {color: '#233554'}, ticks: {color: '#8892b0'} }, 
+                        x: { ticks: {color: '#8892b0'} } 
+                    }
                 }
             });
 
             document.getElementById('tide-table').innerHTML = list.map(d => {
-                const time = (d.tideTime || d.DateTime).split(/[ T]/)[1].substring(0, 5);
+                const fullTime = d.tideTime || d.DateTime;
+                const time = fullTime.split(/[ T]/)[1].substring(0, 5);
                 const hour = parseInt(time.split(':')[0]);
                 const isGolden = (hour >= 5 && hour <= 7) || (hour >= 17 && hour <= 19);
                 return `<tr class="${isGolden ? 'hot' : ''}">
