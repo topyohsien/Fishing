@@ -21,8 +21,8 @@
     <div style="margin-bottom:15px;"><a href="javascript:location.reload()" style="color:var(--highlight); text-decoration:none; font-weight:bold;">🔄 刷新數據</a></div>
     
     <div class="card">
-        <div id="status-title" class="highlight" style="font-size:1.1rem;">📍 數據載入中...</div>
-        <div id="bite-hint" style="margin-top:10px; font-size:0.9rem;">咬況預估：<span class="highlight">分析中...</span></div>
+        <div id="status-title" class="highlight" style="font-size:1.1rem;">📍 數據搜尋中...</div>
+        <div id="bite-hint" style="margin-top:10px; font-size:0.9rem;">咬況預估：<span class="highlight">正在匹配測站...</span></div>
     </div>
 
     <div class="card"><canvas id="tideChart"></canvas></div>
@@ -34,47 +34,63 @@
 
     <script>
         const API_KEY = 'CWA-337BBD8F-DBC8-4D8D-A92F-DAA5B176120A';
-        const today = new Date().toLocaleDateString('en-CA'); // 取得 YYYY-MM-DD
+        const today = new Date().toLocaleDateString('en-CA'); 
 
         async function fetchTide() {
             try {
                 const res = await fetch(`https://opendata.cwa.gov.tw/api/v1/rest/datastore/F-A0021-001?Authorization=${API_KEY}`);
                 const data = await res.json();
                 
-                // --- 暴力搜尋邏輯：直接找出含有安平的物件 ---
-                let allLocations = [];
-                if (data.records.tideForecasts) allLocations = data.records.tideForecasts.location;
-                else if (data.records.Location) allLocations = data.records.Location;
-                else if (data.records.location) allLocations = data.records.location;
+                // 1. 深度搜尋：找出所有可能的 location 陣列
+                let locations = [];
+                if (data.records?.tideForecasts?.location) {
+                    locations = data.records.tideForecasts.location;
+                } else if (data.records?.Location) {
+                    locations = data.records.Location;
+                } else if (data.records?.location) {
+                    locations = data.records.location;
+                }
 
-                const anping = allLocations.find(l => 
+                // 2. 針對「安平」進行多層級比對
+                let targetStation = locations.find(l => 
                     (l.stationName && l.stationName.includes("安平")) || 
-                    (l.LocationName && l.LocationName.includes("臺南"))
+                    (l.locationName && l.locationName.includes("安平"))
                 );
 
-                if (!anping) throw new Error("找不到安平測站，請檢查 API 回傳內容");
+                // 如果第一層找不到，嘗試進入臺南市搜尋
+                if (!targetStation) {
+                    const tainan = locations.find(l => l.locationName && l.locationName.includes("臺南"));
+                    if (tainan && tainan.station) {
+                        targetStation = tainan.station.find(s => s.stationName.includes("安平"));
+                    }
+                }
 
-                // 取得潮汐資料數組
-                const forecast = anping.tideForecast || anping.TideForecast;
-                const periods = forecast.tidePeriod || forecast.TimePeriods;
+                if (!targetStation) throw new Error("測站列表匹配失敗");
 
-                // 篩選今日
+                // 3. 抓取潮汐預報
+                const forecast = targetStation.tideForecast || targetStation.TideForecast;
+                const periods = forecast?.tidePeriod || forecast?.TimePeriods;
+
+                if (!periods) throw new Error("找到測站但無預報內容");
+
+                // 4. 過濾今日
                 const daily = periods.filter(p => {
                     const t = p.tideTime || p.DateTime;
-                    return t.startsWith(today);
+                    return t && t.startsWith(today);
                 });
 
-                if (daily.length === 0) throw new Error("今日無預報，請確認 API 日期範圍");
+                if (daily.length === 0) throw new Error("今日無預報，請確認 API 更新時間");
 
-                // 渲染 UI
-                const hArr = daily.map(d => parseInt(d.tideHeight || d.TideHeight));
+                // 5. 計算潮差
+                const hArr = daily.map(d => parseInt(d.tideHeight || d.TideHeight || 0));
                 const diff = Math.max(...hArr) - Math.min(...hArr);
                 
                 document.getElementById('status-title').innerText = `📍 安平港 - 今日潮差 ${diff}cm`;
-                document.getElementById('bite-hint').innerHTML = diff > 100 ? "咬況預估：<span class='highlight'>🔥 大潮活躍</span>" : "咬況預估：<span>🎣 穩定普通</span>";
+                document.getElementById('bite-hint').innerHTML = diff > 100 ? "咬況預估：<span class='highlight'>🔥 大潮活躍 (Jigging)</span>" : "咬況預估：<span>🎣 穩定普通</span>";
 
                 render(daily);
             } catch (err) {
+                console.error(err);
                 document.getElementById('tide-table').innerHTML = `<tr><td colspan="4" style="color:#ff6b6b; padding:20px;">❌ 載入失敗<br><small>${err.message}</small></td></tr>`;
             }
         }
@@ -83,7 +99,8 @@
             const labels = list.map(d => (d.tideTime || d.DateTime).split(/[ T]/)[1].substring(0, 5));
             const heights = list.map(d => (d.tideHeight || d.TideHeight));
 
-            new Chart(document.getElementById('tideChart'), {
+            if (window.myChart) window.myChart.destroy();
+            window.myChart = new Chart(document.getElementById('tideChart'), {
                 type: 'line',
                 data: {
                     labels: labels,
@@ -108,8 +125,8 @@
                 return `<tr class="${isGolden ? 'hot' : ''}">
                     <td>${time}</td>
                     <td>${d.tideHeight || d.TideHeight}cm</td>
-                    <td>${d.tideType || d.TideType}</td>
-                    <td>${isGolden ? '🔥 黃金時段' : '-'}</td>
+                    <td>${d.tideType || d.TideType || '一般'}</td>
+                    <td>${isGolden ? '🔥 黃金母光' : '-'}</td>
                 </tr>`;
             }).join('');
         }
