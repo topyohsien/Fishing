@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>安平海象與咬況預報</title>
+    <title>海象詳情 - 自動測站匹配版</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         :root { --bg: #0a192f; --card: #172a45; --highlight: #64ffda; --text: #e6f1ff; }
@@ -18,11 +18,11 @@
     </style>
 </head>
 <body>
-    <div style="margin-bottom:15px;"><a href="javascript:location.reload()" style="color:var(--highlight); text-decoration:none; font-weight:bold;">🔄 刷新數據</a></div>
+    <div style="margin-bottom:15px;"><a href="index.html" style="color:var(--highlight); text-decoration:none; font-weight:bold;">← 返回地圖</a></div>
     
     <div class="card">
-        <div id="status-title" class="highlight" style="font-size:1.1rem;">📍 數據載入中...</div>
-        <div id="bite-hint" style="margin-top:10px; font-size:0.9rem;">咬況預估：<span class="highlight">正在分析潮水...</span></div>
+        <div id="status-title" class="highlight" style="font-size:1.1rem;">📍 正在搜尋最近測站...</div>
+        <div id="bite-hint" style="margin-top:10px; font-size:0.9rem;">咬況預估：分析中...</div>
     </div>
 
     <div class="card"><canvas id="tideChart"></canvas></div>
@@ -34,48 +34,59 @@
 
     <script>
         const API_KEY = 'CWA-337BBD8F-DBC8-4D8D-A92F-DAA5B176120A';
-        // 取得台灣時間的今天日期 (YYYY-MM-DD)
         const todayStr = new Date().toLocaleDateString('zh-TW', {year:'numeric', month:'2-digit', day:'2-digit'}).replace(/\//g, '-');
+
+        // 1. 從 URL 取得座標
+        const params = new URLSearchParams(window.location.search);
+        const uLat = parseFloat(params.get('lat'));
+        const uLng = parseFloat(params.get('lng'));
 
         async function fetchTide() {
             try {
                 const res = await fetch(`https://opendata.cwa.gov.tw/api/v1/rest/datastore/F-A0021-001?Authorization=${API_KEY}`);
                 const data = await res.json();
-                
-                // 1. 根據截圖路徑：records.TideForecasts
                 const allForecasts = data.records.TideForecasts;
                 
-                // 2. 尋找安平 (名稱通常為 臺南市安平區)
-                const anpingData = allForecasts.find(item => item.Location.LocationName.includes("安平") || item.Location.LocationName.includes("臺南"));
-                
-                if (!anpingData) throw new Error("找不到安平測站資料");
+                let targetStation = null;
 
-                // 3. 進入 TimePeriods.Daily 找到今天的日期
-                const dailyList = anpingData.Location.TimePeriods.Daily;
+                // 2. 自動匹配邏輯
+                if (!isNaN(uLat) && !isNaN(uLng)) {
+                    // 尋找距離點擊位置最近的測站
+                    let minDistance = Infinity;
+                    allForecasts.forEach(item => {
+                        const sLat = item.Location.Latitude;
+                        const sLng = item.Location.Longitude;
+                        const dist = Math.sqrt(Math.pow(sLat - uLat, 2) + Math.pow(sLng - uLng, 2));
+                        if (dist < minDistance) {
+                            minDistance = dist;
+                            targetStation = item;
+                        }
+                    });
+                } else {
+                    // 預設安平
+                    targetStation = allForecasts.find(item => item.Location.LocationName.includes("安平"));
+                }
+
+                if (!targetStation) throw new Error("找不到對應測站");
+
+                const dailyList = targetStation.Location.TimePeriods.Daily;
                 const todayData = dailyList.find(d => d.Date === todayStr);
+                if (!todayData) throw new Error("今日無預報資料");
 
-                if (!todayData) throw new Error(`找不到今日 (${todayStr}) 的預報`);
-
-                // 4. 取得今日的潮汐時間點 (Time 陣列)
                 const timePoints = todayData.Time;
+                const hArr = timePoints.map(t => t.TideHeights.AboveChartDatum);
+                const diff = Math.max(...hArr) - Math.min(...hArr);
 
-                // 計算潮差 (使用 AboveChartDatum 當作潮高基準)
-                const heights = timePoints.map(t => t.TideHeights.AboveChartDatum);
-                const diff = Math.max(...heights) - Math.min(...heights);
-
-                // 更新介面
-                document.getElementById('status-title').innerText = `📍 ${anpingData.Location.LocationName} (${todayData.TideRange}潮)`;
-                document.getElementById('bite-hint').innerHTML = `潮差：${diff}cm | 咬況預估：<span class="highlight">${diff > 100 ? '🔥 大潮活躍' : '🎣 穩定小潮'}</span>`;
+                document.getElementById('status-title').innerText = `📍 ${targetStation.Location.LocationName} (${todayData.TideRange}潮)`;
+                document.getElementById('bite-hint').innerHTML = `今日潮差: ${diff}cm | 咬況: <span class="highlight">${diff > 100 ? '🔥 大潮活躍' : '🎣 穩定小潮'}</span>`;
 
                 render(timePoints);
             } catch (err) {
-                console.error(err);
-                document.getElementById('tide-table').innerHTML = `<tr><td colspan="4" style="color:#ff6b6b; padding:20px;">❌ 載入失敗<br><small>${err.message}</small></td></tr>`;
+                document.getElementById('tide-table').innerHTML = `<tr><td colspan="4" style="color:#ff6b6b;">❌ ${err.message}</td></tr>`;
             }
         }
 
         function render(list) {
-            // 解析時間 (ISO 格式 2026-04-19T00:49:00+08:00)
             const labels = list.map(d => d.DateTime.split('T')[1].substring(0, 5));
             const heights = list.map(d => d.TideHeights.AboveChartDatum);
 
@@ -104,7 +115,6 @@
             document.getElementById('tide-table').innerHTML = list.map(d => {
                 const time = d.DateTime.split('T')[1].substring(0, 5);
                 const hour = parseInt(time.split(':')[0]);
-                // 黃金母光/夕光時段判斷
                 const isGolden = (hour >= 5 && hour <= 7) || (hour >= 17 && hour <= 19);
                 return `<tr class="${isGolden ? 'hot' : ''}">
                     <td>${time}</td>
